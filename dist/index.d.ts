@@ -20,9 +20,9 @@ export interface MagicConnectConstructorArgs {
 }
 export declare class MagicConnect extends Connector {
     provider: Eip1193Bridge | undefined;
-    private readonly options;
     magic?: MagicInstance<ConnectExtensionInstance[]>;
     private eagerConnection?;
+    private readonly options;
     constructor({ actions, options, onError }: MagicConnectConstructorArgs);
     private connectListener;
     private disconnectListener;

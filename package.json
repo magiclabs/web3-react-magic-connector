@@ -1,9 +1,9 @@
 {
-  "name": "web3-react-magic-connect",
+  "name": "web3-react-magic",
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "commonjs",
   "exports": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,8 +17,8 @@
     "@ethersproject/experimental": "^5.7.0",
     "@ethersproject/providers": "^5.7.2",
     "@magic-ext/connect": "^6.7.0",
-    "@web3-react/types": "8.1.2-beta.0",
-    "magic-sdk": "^13.6.0",
+    "@web3-react/types": "^8.1.2-beta.0",
+    "magic-sdk": "^13.6.1",
     "typescript": "^5.0.2"
   },
   "devDependencies": {

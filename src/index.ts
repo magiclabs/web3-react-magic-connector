@@ -10,6 +10,7 @@ import type {
 } from "magic-sdk"
 import type { ConnectExtension as ConnectExtensionInstance } from "@magic-ext/connect"
 import { Eip1193Bridge } from "@ethersproject/experimental"
+import { Web3Provider } from "@ethersproject/providers"
 
 function parseChainId(chainId: string | number) {
   return typeof chainId === "number"
@@ -37,10 +38,9 @@ export interface MagicConnectConstructorArgs {
 
 export class MagicConnect extends Connector {
   public provider: Eip1193Bridge | undefined
-  private readonly options: MagicConnectorSDKOptions
   public magic?: MagicInstance<ConnectExtensionInstance[]>
-
   private eagerConnection?: Promise<void>
+  private readonly options: MagicConnectorSDKOptions
 
   constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
     super(actions, onError)
@@ -71,39 +71,27 @@ export class MagicConnect extends Connector {
 
   private async isomorphicInitialize(): Promise<void> {
     if (this.eagerConnection) return
-    const { ConnectExtension } = await import("@magic-ext/connect")
+
+    const [{ ConnectExtension }, { Magic }] = await Promise.all([
+      import("@magic-ext/connect"),
+      import("magic-sdk"),
+    ])
+
     const { apiKey, networkOptions } = this.options
+    this.magic = new Magic(apiKey, {
+      extensions: [new ConnectExtension()],
+      network: networkOptions,
+    })
 
-    await (this.eagerConnection = import("magic-sdk")
-      .then((m) => m.Magic)
-      .then(
-        (Magic) =>
-          (this.magic = new Magic(apiKey, {
-            extensions: [new ConnectExtension()],
-            network: networkOptions,
-          }))
-      )
-      .then(async () => {
-        const [{ Web3Provider }, { Eip1193Bridge }] = await Promise.all([
-          import("@ethersproject/providers"),
-          import("@ethersproject/experimental"),
-        ])
+    const provider = new Web3Provider(this.magic.rpcProvider as any)
+    this.provider = new Eip1193Bridge(provider.getSigner(), provider)
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        const provider = new Web3Provider(this.magic?.rpcProvider as any)
+    this.provider.on("connect", this.connectListener)
+    this.provider.on("disconnect", this.disconnectListener)
+    this.provider.on("chainChanged", this.chainChangedListener)
+    this.provider.on("accountsChanged", this.accountsChangedListener)
 
-        this.provider = new Eip1193Bridge(provider.getSigner(), provider)
-
-        this.provider.on("connect", this.connectListener)
-
-        this.provider.on("disconnect", this.disconnectListener)
-
-        this.provider.on("chainChanged", (chainId: string): void => {
-          this.actions.update({ chainId: parseChainId(chainId) })
-        })
-
-        this.provider.on("accountsChanged", this.accountsChangedListener)
-      }))
+    this.eagerConnection = Promise.resolve()
   }
 
   /** {@inheritdoc Connector.connectEagerly} */
@@ -113,15 +101,16 @@ export class MagicConnect extends Connector {
     try {
       await this.isomorphicInitialize()
       const walletInfo = await this.magic?.connect.getWalletInfo()
-      if (!this.provider || !walletInfo)
+      if (!this.provider || !walletInfo) {
         throw new Error("No existing connection")
+      }
 
-      return Promise.all([
+      const [chainId, accounts] = await Promise.all([
         this.provider.request({ method: "eth_chainId" }) as Promise<string>,
         this.provider.request({ method: "eth_accounts" }) as Promise<string[]>,
-      ]).then(([chainId, accounts]) => {
-        this.actions.update({ chainId: parseChainId(chainId), accounts })
-      })
+      ])
+
+      this.actions.update({ chainId: parseChainId(chainId), accounts })
     } catch (error) {
       cancelActivation()
       this.eagerConnection = undefined
@@ -131,21 +120,19 @@ export class MagicConnect extends Connector {
 
   public async activate(): Promise<void> {
     const cancelActivation = this.actions.startActivation()
+
     try {
       await this.isomorphicInitialize()
+      if (!this.provider) {
+        throw new Error("No existing connection")
+      }
 
-      if (!this.provider) throw new Error("No existing connection")
-      await Promise.all([
+      const [chainId, accounts] = await Promise.all([
         this.provider.request({ method: "eth_chainId" }) as Promise<string>,
         this.provider.request({ method: "eth_accounts" }) as Promise<string[]>,
       ])
-        .then(([chainId, accounts]) => {
-          this.actions.update({ chainId: parseChainId(chainId), accounts })
-        })
-        .catch((error) => {
-          cancelActivation()
-          throw error
-        })
+
+      this.actions.update({ chainId: parseChainId(chainId), accounts })
     } catch (error) {
       cancelActivation()
       this.eagerConnection = undefined
@@ -155,13 +142,16 @@ export class MagicConnect extends Connector {
 
   /** {@inheritdoc Connector.deactivate} */
   public async deactivate(): Promise<void> {
-    this.provider?.off("connect", this.connectListener)
-    this.provider?.off("disconnect", this.disconnectListener)
-    this.provider?.off("chainChanged", this.chainChangedListener)
-    this.provider?.off("accountsChanged", this.accountsChangedListener)
+    if (this.provider) {
+      this.provider.off("connect", this.connectListener)
+      this.provider.off("disconnect", this.disconnectListener)
+      this.provider.off("chainChanged", this.chainChangedListener)
+      this.provider.off("accountsChanged", this.accountsChangedListener)
 
-    await this.magic?.connect.disconnect()
-    this.provider = undefined
+      await this.magic?.connect.disconnect()
+      this.provider = undefined
+    }
+
     this.eagerConnection = undefined
     this.actions.resetState()
   }

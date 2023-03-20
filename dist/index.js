@@ -34,6 +34,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MagicConnect = void 0;
 const types_1 = require("@web3-react/types");
+const experimental_1 = require("@ethersproject/experimental");
+const providers_1 = require("@ethersproject/providers");
 function parseChainId(chainId) {
     return typeof chainId === "number"
         ? chainId
@@ -69,29 +71,22 @@ class MagicConnect extends types_1.Connector {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.eagerConnection)
                 return;
-            const { ConnectExtension } = yield Promise.resolve().then(() => __importStar(require("@magic-ext/connect")));
+            const [{ ConnectExtension }, { Magic }] = yield Promise.all([
+                Promise.resolve().then(() => __importStar(require("@magic-ext/connect"))),
+                Promise.resolve().then(() => __importStar(require("magic-sdk"))),
+            ]);
             const { apiKey, networkOptions } = this.options;
-            yield (this.eagerConnection = Promise.resolve().then(() => __importStar(require("magic-sdk"))).then((m) => m.Magic)
-                .then((Magic) => (this.magic = new Magic(apiKey, {
+            this.magic = new Magic(apiKey, {
                 extensions: [new ConnectExtension()],
                 network: networkOptions,
-            })))
-                .then(() => __awaiter(this, void 0, void 0, function* () {
-                var _a;
-                const [{ Web3Provider }, { Eip1193Bridge }] = yield Promise.all([
-                    Promise.resolve().then(() => __importStar(require("@ethersproject/providers"))),
-                    Promise.resolve().then(() => __importStar(require("@ethersproject/experimental"))),
-                ]);
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                const provider = new Web3Provider((_a = this.magic) === null || _a === void 0 ? void 0 : _a.rpcProvider);
-                this.provider = new Eip1193Bridge(provider.getSigner(), provider);
-                this.provider.on("connect", this.connectListener);
-                this.provider.on("disconnect", this.disconnectListener);
-                this.provider.on("chainChanged", (chainId) => {
-                    this.actions.update({ chainId: parseChainId(chainId) });
-                });
-                this.provider.on("accountsChanged", this.accountsChangedListener);
-            })));
+            });
+            const provider = new providers_1.Web3Provider(this.magic.rpcProvider);
+            this.provider = new experimental_1.Eip1193Bridge(provider.getSigner(), provider);
+            this.provider.on("connect", this.connectListener);
+            this.provider.on("disconnect", this.disconnectListener);
+            this.provider.on("chainChanged", this.chainChangedListener);
+            this.provider.on("accountsChanged", this.accountsChangedListener);
+            this.eagerConnection = Promise.resolve();
         });
     }
     /** {@inheritdoc Connector.connectEagerly} */
@@ -102,14 +97,14 @@ class MagicConnect extends types_1.Connector {
             try {
                 yield this.isomorphicInitialize();
                 const walletInfo = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.connect.getWalletInfo());
-                if (!this.provider || !walletInfo)
+                if (!this.provider || !walletInfo) {
                     throw new Error("No existing connection");
-                return Promise.all([
+                }
+                const [chainId, accounts] = yield Promise.all([
                     this.provider.request({ method: "eth_chainId" }),
                     this.provider.request({ method: "eth_accounts" }),
-                ]).then(([chainId, accounts]) => {
-                    this.actions.update({ chainId: parseChainId(chainId), accounts });
-                });
+                ]);
+                this.actions.update({ chainId: parseChainId(chainId), accounts });
             }
             catch (error) {
                 cancelActivation();
@@ -123,19 +118,14 @@ class MagicConnect extends types_1.Connector {
             const cancelActivation = this.actions.startActivation();
             try {
                 yield this.isomorphicInitialize();
-                if (!this.provider)
+                if (!this.provider) {
                     throw new Error("No existing connection");
-                yield Promise.all([
+                }
+                const [chainId, accounts] = yield Promise.all([
                     this.provider.request({ method: "eth_chainId" }),
                     this.provider.request({ method: "eth_accounts" }),
-                ])
-                    .then(([chainId, accounts]) => {
-                    this.actions.update({ chainId: parseChainId(chainId), accounts });
-                })
-                    .catch((error) => {
-                    cancelActivation();
-                    throw error;
-                });
+                ]);
+                this.actions.update({ chainId: parseChainId(chainId), accounts });
             }
             catch (error) {
                 cancelActivation();
@@ -146,14 +136,16 @@ class MagicConnect extends types_1.Connector {
     }
     /** {@inheritdoc Connector.deactivate} */
     deactivate() {
-        var _a, _b, _c, _d, _e;
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            (_a = this.provider) === null || _a === void 0 ? void 0 : _a.off("connect", this.connectListener);
-            (_b = this.provider) === null || _b === void 0 ? void 0 : _b.off("disconnect", this.disconnectListener);
-            (_c = this.provider) === null || _c === void 0 ? void 0 : _c.off("chainChanged", this.chainChangedListener);
-            (_d = this.provider) === null || _d === void 0 ? void 0 : _d.off("accountsChanged", this.accountsChangedListener);
-            yield ((_e = this.magic) === null || _e === void 0 ? void 0 : _e.connect.disconnect());
-            this.provider = undefined;
+            if (this.provider) {
+                this.provider.off("connect", this.connectListener);
+                this.provider.off("disconnect", this.disconnectListener);
+                this.provider.off("chainChanged", this.chainChangedListener);
+                this.provider.off("accountsChanged", this.accountsChangedListener);
+                yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.connect.disconnect());
+                this.provider = undefined;
+            }
             this.eagerConnection = undefined;
             this.actions.resetState();
         });
