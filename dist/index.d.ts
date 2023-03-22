@@ -24,6 +24,7 @@ export declare class MagicConnect extends Connector {
     private eagerConnection?;
     private readonly options;
     constructor({ actions, options, onError }: MagicConnectConstructorArgs);
+    private initializeMagicInstance;
     private connectListener;
     private disconnectListener;
     private chainChangedListener;

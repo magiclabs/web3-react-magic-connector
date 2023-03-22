@@ -1,27 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -34,6 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MagicConnect = void 0;
 const types_1 = require("@web3-react/types");
+const magic_sdk_1 = require("magic-sdk");
+const connect_1 = require("@magic-ext/connect");
 const experimental_1 = require("@ethersproject/experimental");
 const providers_1 = require("@ethersproject/providers");
 function parseChainId(chainId) {
@@ -66,27 +45,30 @@ class MagicConnect extends types_1.Connector {
             }
         };
         this.options = options;
+        this.initializeMagicInstance();
+    }
+    initializeMagicInstance() {
+        const { apiKey, networkOptions } = this.options;
+        if (typeof window !== "undefined") {
+            this.magic = new magic_sdk_1.Magic(apiKey, {
+                extensions: [new connect_1.ConnectExtension()],
+                network: networkOptions,
+            });
+        }
     }
     isomorphicInitialize() {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.eagerConnection)
                 return;
-            const [{ ConnectExtension }, { Magic }] = yield Promise.all([
-                Promise.resolve().then(() => __importStar(require("@magic-ext/connect"))),
-                Promise.resolve().then(() => __importStar(require("magic-sdk"))),
-            ]);
-            const { apiKey, networkOptions } = this.options;
-            this.magic = new Magic(apiKey, {
-                extensions: [new ConnectExtension()],
-                network: networkOptions,
-            });
-            const provider = new providers_1.Web3Provider(this.magic.rpcProvider);
-            this.provider = new experimental_1.Eip1193Bridge(provider.getSigner(), provider);
-            this.provider.on("connect", this.connectListener);
-            this.provider.on("disconnect", this.disconnectListener);
-            this.provider.on("chainChanged", this.chainChangedListener);
-            this.provider.on("accountsChanged", this.accountsChangedListener);
-            this.eagerConnection = Promise.resolve();
+            if (this.magic) {
+                const provider = new providers_1.Web3Provider(this.magic.rpcProvider);
+                this.provider = new experimental_1.Eip1193Bridge(provider.getSigner(), provider);
+                this.provider.on("connect", this.connectListener);
+                this.provider.on("disconnect", this.disconnectListener);
+                this.provider.on("chainChanged", this.chainChangedListener);
+                this.provider.on("accountsChanged", this.accountsChangedListener);
+                this.eagerConnection = Promise.resolve();
+            }
         });
     }
     /** {@inheritdoc Connector.connectEagerly} */

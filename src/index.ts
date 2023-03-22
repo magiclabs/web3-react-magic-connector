@@ -8,6 +8,8 @@ import type {
   Magic as MagicInstance,
   MagicSDKAdditionalConfiguration,
 } from "magic-sdk"
+import { Magic } from "magic-sdk"
+import { ConnectExtension } from "@magic-ext/connect"
 import type { ConnectExtension as ConnectExtensionInstance } from "@magic-ext/connect"
 import { Eip1193Bridge } from "@ethersproject/experimental"
 import { Web3Provider } from "@ethersproject/providers"
@@ -45,6 +47,17 @@ export class MagicConnect extends Connector {
   constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
     super(actions, onError)
     this.options = options
+    this.initializeMagicInstance()
+  }
+
+  private initializeMagicInstance(): void {
+    const { apiKey, networkOptions } = this.options
+    if (typeof window !== "undefined") {
+      this.magic = new Magic(apiKey, {
+        extensions: [new ConnectExtension()],
+        network: networkOptions,
+      })
+    }
   }
 
   private connectListener = ({ chainId }: ProviderConnectInfo): void => {
@@ -72,26 +85,17 @@ export class MagicConnect extends Connector {
   private async isomorphicInitialize(): Promise<void> {
     if (this.eagerConnection) return
 
-    const [{ ConnectExtension }, { Magic }] = await Promise.all([
-      import("@magic-ext/connect"),
-      import("magic-sdk"),
-    ])
+    if (this.magic) {
+      const provider = new Web3Provider(this.magic.rpcProvider as any)
+      this.provider = new Eip1193Bridge(provider.getSigner(), provider)
 
-    const { apiKey, networkOptions } = this.options
-    this.magic = new Magic(apiKey, {
-      extensions: [new ConnectExtension()],
-      network: networkOptions,
-    })
+      this.provider.on("connect", this.connectListener)
+      this.provider.on("disconnect", this.disconnectListener)
+      this.provider.on("chainChanged", this.chainChangedListener)
+      this.provider.on("accountsChanged", this.accountsChangedListener)
 
-    const provider = new Web3Provider(this.magic.rpcProvider as any)
-    this.provider = new Eip1193Bridge(provider.getSigner(), provider)
-
-    this.provider.on("connect", this.connectListener)
-    this.provider.on("disconnect", this.disconnectListener)
-    this.provider.on("chainChanged", this.chainChangedListener)
-    this.provider.on("accountsChanged", this.accountsChangedListener)
-
-    this.eagerConnection = Promise.resolve()
+      this.eagerConnection = Promise.resolve()
+    }
   }
 
   /** {@inheritdoc Connector.connectEagerly} */
