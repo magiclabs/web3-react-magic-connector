@@ -18,7 +18,7 @@
     "@ethersproject/providers": "^5.7.2",
     "@magic-ext/connect": "^6.7.0",
     "@web3-react/types": "^8.1.2-beta.0",
-    "magic-sdk": "^13.6.1",
+    "magic-sdk": "^15",
     "typescript": "^5.0.2"
   },
   "devDependencies": {

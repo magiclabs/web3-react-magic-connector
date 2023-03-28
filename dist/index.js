@@ -12,7 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MagicConnect = void 0;
 const types_1 = require("@web3-react/types");
 const magic_sdk_1 = require("magic-sdk");
-const connect_1 = require("@magic-ext/connect");
 const experimental_1 = require("@ethersproject/experimental");
 const providers_1 = require("@ethersproject/providers");
 function parseChainId(chainId) {
@@ -51,7 +50,7 @@ class MagicConnect extends types_1.Connector {
         const { apiKey, networkOptions } = this.options;
         if (typeof window !== "undefined") {
             this.magic = new magic_sdk_1.Magic(apiKey, {
-                extensions: [new connect_1.ConnectExtension()],
+                // extensions: [new ConnectExtension()],
                 network: networkOptions,
             });
         }
@@ -63,10 +62,10 @@ class MagicConnect extends types_1.Connector {
             if (this.magic) {
                 const provider = new providers_1.Web3Provider(this.magic.rpcProvider);
                 this.provider = new experimental_1.Eip1193Bridge(provider.getSigner(), provider);
-                this.provider.on("connect", this.connectListener);
-                this.provider.on("disconnect", this.disconnectListener);
-                this.provider.on("chainChanged", this.chainChangedListener);
-                this.provider.on("accountsChanged", this.accountsChangedListener);
+                // this.provider.on("connect", this.connectListener)
+                // this.provider.on("disconnect", this.disconnectListener)
+                // this.provider.on("chainChanged", this.chainChangedListener)
+                // this.provider.on("accountsChanged", this.accountsChangedListener)
                 this.eagerConnection = Promise.resolve();
             }
         });
@@ -78,7 +77,7 @@ class MagicConnect extends types_1.Connector {
             const cancelActivation = this.actions.startActivation();
             try {
                 yield this.isomorphicInitialize();
-                const walletInfo = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.connect.getWalletInfo());
+                const walletInfo = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.getInfo());
                 if (!this.provider || !walletInfo) {
                     throw new Error("No existing connection");
                 }
@@ -125,7 +124,7 @@ class MagicConnect extends types_1.Connector {
                 this.provider.off("disconnect", this.disconnectListener);
                 this.provider.off("chainChanged", this.chainChangedListener);
                 this.provider.off("accountsChanged", this.accountsChangedListener);
-                yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.connect.disconnect());
+                yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
                 this.provider = undefined;
             }
             this.eagerConnection = undefined;

@@ -1,6 +1,6 @@
 import { Connector, Actions } from "@web3-react/types";
-import type { Magic as MagicInstance, MagicSDKAdditionalConfiguration } from "magic-sdk";
-import type { ConnectExtension as ConnectExtensionInstance } from "@magic-ext/connect";
+import type { MagicSDKAdditionalConfiguration } from "magic-sdk";
+import { Magic } from "magic-sdk";
 import { Eip1193Bridge } from "@ethersproject/experimental";
 export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguration {
     apiKey: string;
@@ -20,7 +20,7 @@ export interface MagicConnectConstructorArgs {
 }
 export declare class MagicConnect extends Connector {
     provider: Eip1193Bridge | undefined;
-    magic?: MagicInstance<ConnectExtensionInstance[]>;
+    magic?: Magic;
     private eagerConnection?;
     private readonly options;
     constructor({ actions, options, onError }: MagicConnectConstructorArgs);
