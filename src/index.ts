@@ -4,10 +4,10 @@ import {
   ProviderConnectInfo,
   ProviderRpcError,
 } from "@web3-react/types"
-import type { MagicSDKAdditionalConfiguration } from "magic-sdk"
-import { Magic } from "magic-sdk"
-import { Eip1193Bridge } from "@ethersproject/experimental"
-import { Web3Provider } from "@ethersproject/providers"
+
+import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk"
+import { RPCProviderModule } from "@magic-sdk/provider/dist/types/modules/rpc-provider"
+import { AbstractProvider } from "web3-core"
 
 function parseChainId(chainId: string | number) {
   return typeof chainId === "number"
@@ -34,7 +34,7 @@ export interface MagicConnectConstructorArgs {
 }
 
 export class MagicConnect extends Connector {
-  public provider: Eip1193Bridge | undefined
+  public provider?: RPCProviderModule & AbstractProvider
   public magic?: Magic
   private eagerConnection?: Promise<void>
   private readonly options: MagicConnectorSDKOptions
@@ -49,9 +49,9 @@ export class MagicConnect extends Connector {
     const { apiKey, networkOptions } = this.options
     if (typeof window !== "undefined") {
       this.magic = new Magic(apiKey, {
-        // extensions: [new ConnectExtension()],
         network: networkOptions,
       })
+      this.provider = this.magic.rpcProvider
     }
   }
 
@@ -70,7 +70,6 @@ export class MagicConnect extends Connector {
 
   private accountsChangedListener = (accounts: string[]): void => {
     if (accounts.length === 0) {
-      // handle this edge case by disconnecting
       this.actions.resetState()
     } else {
       this.actions.update({ accounts })
@@ -80,44 +79,17 @@ export class MagicConnect extends Connector {
   private async isomorphicInitialize(): Promise<void> {
     if (this.eagerConnection) return
 
-    if (this.magic) {
-      const provider = new Web3Provider(this.magic.rpcProvider as any)
-      this.provider = new Eip1193Bridge(provider.getSigner(), provider)
-
-      // this.provider.on("connect", this.connectListener)
-      // this.provider.on("disconnect", this.disconnectListener)
-      // this.provider.on("chainChanged", this.chainChangedListener)
-      // this.provider.on("accountsChanged", this.accountsChangedListener)
+    if (this.provider) {
+      this.provider.on("connect", this.connectListener)
+      this.provider.on("disconnect", this.disconnectListener)
+      this.provider.on("chainChanged", this.chainChangedListener)
+      this.provider.on("accountsChanged", this.accountsChangedListener)
 
       this.eagerConnection = Promise.resolve()
     }
   }
 
-  /** {@inheritdoc Connector.connectEagerly} */
-  public async connectEagerly(): Promise<void> {
-    const cancelActivation = this.actions.startActivation()
-
-    try {
-      await this.isomorphicInitialize()
-      const walletInfo = await this.magic?.wallet.getInfo()
-      if (!this.provider || !walletInfo) {
-        throw new Error("No existing connection")
-      }
-
-      const [chainId, accounts] = await Promise.all([
-        this.provider.request({ method: "eth_chainId" }) as Promise<string>,
-        this.provider.request({ method: "eth_accounts" }) as Promise<string[]>,
-      ])
-
-      this.actions.update({ chainId: parseChainId(chainId), accounts })
-    } catch (error) {
-      cancelActivation()
-      this.eagerConnection = undefined
-      throw error
-    }
-  }
-
-  public async activate(): Promise<void> {
+  private async handleActivation(): Promise<void> {
     const cancelActivation = this.actions.startActivation()
 
     try {
@@ -139,6 +111,20 @@ export class MagicConnect extends Connector {
     }
   }
 
+  /** {@inheritdoc Connector.connectEagerly} */
+  public async connectEagerly(): Promise<void> {
+    const walletInfo = await this.magic?.wallet.getInfo()
+    if (!walletInfo) {
+      throw new Error("No connected wallet")
+    }
+
+    await this.handleActivation()
+  }
+
+  public async activate(): Promise<void> {
+    await this.handleActivation()
+  }
+
   /** {@inheritdoc Connector.deactivate} */
   public async deactivate(): Promise<void> {
     if (this.provider) {
@@ -148,7 +134,6 @@ export class MagicConnect extends Connector {
       this.provider.off("accountsChanged", this.accountsChangedListener)
 
       await this.magic?.wallet.disconnect()
-      this.provider = undefined
     }
 
     this.eagerConnection = undefined

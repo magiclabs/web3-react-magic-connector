@@ -12,8 +12,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MagicConnect = void 0;
 const types_1 = require("@web3-react/types");
 const magic_sdk_1 = require("magic-sdk");
-const experimental_1 = require("@ethersproject/experimental");
-const providers_1 = require("@ethersproject/providers");
 function parseChainId(chainId) {
     return typeof chainId === "number"
         ? chainId
@@ -36,7 +34,6 @@ class MagicConnect extends types_1.Connector {
         };
         this.accountsChangedListener = (accounts) => {
             if (accounts.length === 0) {
-                // handle this edge case by disconnecting
                 this.actions.resetState();
             }
             else {
@@ -50,51 +47,25 @@ class MagicConnect extends types_1.Connector {
         const { apiKey, networkOptions } = this.options;
         if (typeof window !== "undefined") {
             this.magic = new magic_sdk_1.Magic(apiKey, {
-                // extensions: [new ConnectExtension()],
                 network: networkOptions,
             });
+            this.provider = this.magic.rpcProvider;
         }
     }
     isomorphicInitialize() {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.eagerConnection)
                 return;
-            if (this.magic) {
-                const provider = new providers_1.Web3Provider(this.magic.rpcProvider);
-                this.provider = new experimental_1.Eip1193Bridge(provider.getSigner(), provider);
-                // this.provider.on("connect", this.connectListener)
-                // this.provider.on("disconnect", this.disconnectListener)
-                // this.provider.on("chainChanged", this.chainChangedListener)
-                // this.provider.on("accountsChanged", this.accountsChangedListener)
+            if (this.provider) {
+                this.provider.on("connect", this.connectListener);
+                this.provider.on("disconnect", this.disconnectListener);
+                this.provider.on("chainChanged", this.chainChangedListener);
+                this.provider.on("accountsChanged", this.accountsChangedListener);
                 this.eagerConnection = Promise.resolve();
             }
         });
     }
-    /** {@inheritdoc Connector.connectEagerly} */
-    connectEagerly() {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            const cancelActivation = this.actions.startActivation();
-            try {
-                yield this.isomorphicInitialize();
-                const walletInfo = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.getInfo());
-                if (!this.provider || !walletInfo) {
-                    throw new Error("No existing connection");
-                }
-                const [chainId, accounts] = yield Promise.all([
-                    this.provider.request({ method: "eth_chainId" }),
-                    this.provider.request({ method: "eth_accounts" }),
-                ]);
-                this.actions.update({ chainId: parseChainId(chainId), accounts });
-            }
-            catch (error) {
-                cancelActivation();
-                this.eagerConnection = undefined;
-                throw error;
-            }
-        });
-    }
-    activate() {
+    handleActivation() {
         return __awaiter(this, void 0, void 0, function* () {
             const cancelActivation = this.actions.startActivation();
             try {
@@ -115,6 +86,22 @@ class MagicConnect extends types_1.Connector {
             }
         });
     }
+    /** {@inheritdoc Connector.connectEagerly} */
+    connectEagerly() {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            const walletInfo = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.getInfo());
+            if (!walletInfo) {
+                throw new Error("No connected wallet");
+            }
+            yield this.handleActivation();
+        });
+    }
+    activate() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.handleActivation();
+        });
+    }
     /** {@inheritdoc Connector.deactivate} */
     deactivate() {
         var _a;
@@ -125,7 +112,6 @@ class MagicConnect extends types_1.Connector {
                 this.provider.off("chainChanged", this.chainChangedListener);
                 this.provider.off("accountsChanged", this.accountsChangedListener);
                 yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
-                this.provider = undefined;
             }
             this.eagerConnection = undefined;
             this.actions.resetState();
