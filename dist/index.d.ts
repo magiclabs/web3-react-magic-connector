@@ -1,7 +1,7 @@
 import { Connector, Actions } from "@web3-react/types";
-import type { MagicSDKAdditionalConfiguration } from "magic-sdk";
-import { Magic } from "magic-sdk";
-import { Eip1193Bridge } from "@ethersproject/experimental";
+import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk";
+import { RPCProviderModule } from "@magic-sdk/provider/dist/types/modules/rpc-provider";
+import { AbstractProvider } from "web3-core";
 export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguration {
     apiKey: string;
     networkOptions: {
@@ -19,7 +19,7 @@ export interface MagicConnectConstructorArgs {
     onError?: (error: Error) => void;
 }
 export declare class MagicConnect extends Connector {
-    provider: Eip1193Bridge | undefined;
+    provider?: RPCProviderModule & AbstractProvider;
     magic?: Magic;
     private eagerConnection?;
     private readonly options;
@@ -30,6 +30,7 @@ export declare class MagicConnect extends Connector {
     private chainChangedListener;
     private accountsChangedListener;
     private isomorphicInitialize;
+    private handleActivation;
     /** {@inheritdoc Connector.connectEagerly} */
     connectEagerly(): Promise<void>;
     activate(): Promise<void>;
