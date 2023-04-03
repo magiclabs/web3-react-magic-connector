@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "0.0.5",
+  "version": "0.0.7",
   "type": "commonjs",
   "exports": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,5 +20,9 @@
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Unboxed-Software/web3-react-magic-connect.git"
   }
 }
