@@ -3,6 +3,7 @@ import {
   Actions,
   ProviderConnectInfo,
   ProviderRpcError,
+  AddEthereumChainParameter,
 } from "@web3-react/types"
 
 import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk"
@@ -42,18 +43,18 @@ export class MagicConnect extends Connector {
   constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
     super(actions, onError)
     this.options = options
-    this.initializeMagicInstance()
+    // this.initializeMagicInstance()
   }
 
-  private initializeMagicInstance(): void {
-    const { apiKey, networkOptions } = this.options
-    if (typeof window !== "undefined") {
-      this.magic = new Magic(apiKey, {
-        network: networkOptions,
-      })
-      this.provider = this.magic.rpcProvider
-    }
-  }
+  // private initializeMagicInstance(): void {
+  //   const { apiKey, networkOptions } = this.options
+  //   if (typeof window !== "undefined") {
+  //     this.magic = new Magic(apiKey, {
+  //       network: networkOptions,
+  //     })
+  //     this.provider = this.magic.rpcProvider
+  //   }
+  // }
 
   private connectListener = ({ chainId }: ProviderConnectInfo): void => {
     this.actions.update({ chainId: parseChainId(chainId) })
@@ -89,10 +90,26 @@ export class MagicConnect extends Connector {
     }
   }
 
-  private async handleActivation(): Promise<void> {
+  private async handleActivation(
+    desiredChainIdOrChainParameters?: AddEthereumChainParameter
+  ): Promise<void> {
     const cancelActivation = this.actions.startActivation()
 
     try {
+      const { apiKey, networkOptions } = this.options
+      this.magic = new Magic(apiKey, {
+        network: desiredChainIdOrChainParameters
+          ? {
+              rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+              chainId: desiredChainIdOrChainParameters.chainId,
+            }
+          : {
+              rpcUrl: networkOptions.rpcUrl,
+              chainId: networkOptions.chainId,
+            },
+      })
+      this.provider = this.magic.rpcProvider
+
       await this.isomorphicInitialize()
       if (!this.provider) {
         throw new Error("No existing connection")
@@ -121,8 +138,10 @@ export class MagicConnect extends Connector {
     await this.handleActivation()
   }
 
-  public async activate(): Promise<void> {
-    await this.handleActivation()
+  public async activate(
+    desiredChainIdOrChainParameters?: AddEthereumChainParameter
+  ): Promise<void> {
+    await this.handleActivation(desiredChainIdOrChainParameters)
   }
 
   /** {@inheritdoc Connector.deactivate} */

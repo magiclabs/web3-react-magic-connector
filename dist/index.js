@@ -20,6 +20,15 @@ function parseChainId(chainId) {
 class MagicConnect extends types_1.Connector {
     constructor({ actions, options, onError }) {
         super(actions, onError);
+        // private initializeMagicInstance(): void {
+        //   const { apiKey, networkOptions } = this.options
+        //   if (typeof window !== "undefined") {
+        //     this.magic = new Magic(apiKey, {
+        //       network: networkOptions,
+        //     })
+        //     this.provider = this.magic.rpcProvider
+        //   }
+        // }
         this.connectListener = ({ chainId }) => {
             this.actions.update({ chainId: parseChainId(chainId) });
         };
@@ -41,16 +50,7 @@ class MagicConnect extends types_1.Connector {
             }
         };
         this.options = options;
-        this.initializeMagicInstance();
-    }
-    initializeMagicInstance() {
-        const { apiKey, networkOptions } = this.options;
-        if (typeof window !== "undefined") {
-            this.magic = new magic_sdk_1.Magic(apiKey, {
-                network: networkOptions,
-            });
-            this.provider = this.magic.rpcProvider;
-        }
+        // this.initializeMagicInstance()
     }
     isomorphicInitialize() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -65,10 +65,23 @@ class MagicConnect extends types_1.Connector {
             }
         });
     }
-    handleActivation() {
+    handleActivation(desiredChainIdOrChainParameters) {
         return __awaiter(this, void 0, void 0, function* () {
             const cancelActivation = this.actions.startActivation();
             try {
+                const { apiKey, networkOptions } = this.options;
+                this.magic = new magic_sdk_1.Magic(apiKey, {
+                    network: desiredChainIdOrChainParameters
+                        ? {
+                            rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+                            chainId: desiredChainIdOrChainParameters.chainId,
+                        }
+                        : {
+                            rpcUrl: networkOptions.rpcUrl,
+                            chainId: networkOptions.chainId,
+                        },
+                });
+                this.provider = this.magic.rpcProvider;
                 yield this.isomorphicInitialize();
                 if (!this.provider) {
                     throw new Error("No existing connection");
@@ -97,9 +110,9 @@ class MagicConnect extends types_1.Connector {
             yield this.handleActivation();
         });
     }
-    activate() {
+    activate(desiredChainIdOrChainParameters) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.handleActivation();
+            yield this.handleActivation(desiredChainIdOrChainParameters);
         });
     }
     /** {@inheritdoc Connector.deactivate} */
