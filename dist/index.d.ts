@@ -21,6 +21,7 @@ export interface MagicConnectConstructorArgs {
 export declare class MagicConnect extends Connector {
     provider?: RPCProviderModule & AbstractProvider;
     magic?: Magic;
+    chainId?: number;
     private eagerConnection?;
     private readonly options;
     constructor({ actions, options, onError }: MagicConnectConstructorArgs);
@@ -29,6 +30,7 @@ export declare class MagicConnect extends Connector {
     private chainChangedListener;
     private accountsChangedListener;
     private isomorphicInitialize;
+    private initializeMagicInstance;
     private handleActivation;
     /** {@inheritdoc Connector.connectEagerly} */
     connectEagerly(): Promise<void>;

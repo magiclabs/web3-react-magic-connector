@@ -20,15 +20,6 @@ function parseChainId(chainId) {
 class MagicConnect extends types_1.Connector {
     constructor({ actions, options, onError }) {
         super(actions, onError);
-        // private initializeMagicInstance(): void {
-        //   const { apiKey, networkOptions } = this.options
-        //   if (typeof window !== "undefined") {
-        //     this.magic = new Magic(apiKey, {
-        //       network: networkOptions,
-        //     })
-        //     this.provider = this.magic.rpcProvider
-        //   }
-        // }
         this.connectListener = ({ chainId }) => {
             this.actions.update({ chainId: parseChainId(chainId) });
         };
@@ -50,7 +41,6 @@ class MagicConnect extends types_1.Connector {
             }
         };
         this.options = options;
-        // this.initializeMagicInstance()
     }
     isomorphicInitialize() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -65,23 +55,30 @@ class MagicConnect extends types_1.Connector {
             }
         });
     }
+    initializeMagicInstance(desiredChainIdOrChainParameters) {
+        const { apiKey, networkOptions } = this.options;
+        this.magic = new magic_sdk_1.Magic(apiKey, {
+            network: desiredChainIdOrChainParameters
+                ? {
+                    rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+                    chainId: desiredChainIdOrChainParameters.chainId,
+                }
+                : {
+                    rpcUrl: networkOptions.rpcUrl,
+                    chainId: networkOptions.chainId,
+                },
+        });
+        this.provider = this.magic.rpcProvider;
+        this.chainId =
+            (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
+    }
     handleActivation(desiredChainIdOrChainParameters) {
         return __awaiter(this, void 0, void 0, function* () {
             const cancelActivation = this.actions.startActivation();
             try {
-                const { apiKey, networkOptions } = this.options;
-                this.magic = new magic_sdk_1.Magic(apiKey, {
-                    network: desiredChainIdOrChainParameters
-                        ? {
-                            rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
-                            chainId: desiredChainIdOrChainParameters.chainId,
-                        }
-                        : {
-                            rpcUrl: networkOptions.rpcUrl,
-                            chainId: networkOptions.chainId,
-                        },
-                });
-                this.provider = this.magic.rpcProvider;
+                if (this.chainId !== (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId)) {
+                    this.initializeMagicInstance(desiredChainIdOrChainParameters);
+                }
                 yield this.isomorphicInitialize();
                 if (!this.provider) {
                     throw new Error("No existing connection");

@@ -37,24 +37,14 @@ export interface MagicConnectConstructorArgs {
 export class MagicConnect extends Connector {
   public provider?: RPCProviderModule & AbstractProvider
   public magic?: Magic
+  public chainId?: number
   private eagerConnection?: Promise<void>
   private readonly options: MagicConnectorSDKOptions
 
   constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
     super(actions, onError)
     this.options = options
-    // this.initializeMagicInstance()
   }
-
-  // private initializeMagicInstance(): void {
-  //   const { apiKey, networkOptions } = this.options
-  //   if (typeof window !== "undefined") {
-  //     this.magic = new Magic(apiKey, {
-  //       network: networkOptions,
-  //     })
-  //     this.provider = this.magic.rpcProvider
-  //   }
-  // }
 
   private connectListener = ({ chainId }: ProviderConnectInfo): void => {
     this.actions.update({ chainId: parseChainId(chainId) })
@@ -90,25 +80,36 @@ export class MagicConnect extends Connector {
     }
   }
 
+  private initializeMagicInstance(
+    desiredChainIdOrChainParameters?: AddEthereumChainParameter
+  ): void {
+    const { apiKey, networkOptions } = this.options
+    this.magic = new Magic(apiKey, {
+      network: desiredChainIdOrChainParameters
+        ? {
+            rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+            chainId: desiredChainIdOrChainParameters.chainId,
+          }
+        : {
+            rpcUrl: networkOptions.rpcUrl,
+            chainId: networkOptions.chainId,
+          },
+    })
+
+    this.provider = this.magic.rpcProvider
+    this.chainId =
+      desiredChainIdOrChainParameters?.chainId || networkOptions.chainId
+  }
+
   private async handleActivation(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
   ): Promise<void> {
     const cancelActivation = this.actions.startActivation()
 
     try {
-      const { apiKey, networkOptions } = this.options
-      this.magic = new Magic(apiKey, {
-        network: desiredChainIdOrChainParameters
-          ? {
-              rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
-              chainId: desiredChainIdOrChainParameters.chainId,
-            }
-          : {
-              rpcUrl: networkOptions.rpcUrl,
-              chainId: networkOptions.chainId,
-            },
-      })
-      this.provider = this.magic.rpcProvider
+      if (this.chainId !== desiredChainIdOrChainParameters?.chainId) {
+        this.initializeMagicInstance(desiredChainIdOrChainParameters)
+      }
 
       await this.isomorphicInitialize()
       if (!this.provider) {
