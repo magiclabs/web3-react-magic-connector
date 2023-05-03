@@ -107,7 +107,10 @@ export class MagicConnect extends Connector {
     const cancelActivation = this.actions.startActivation()
 
     try {
-      if (this.chainId !== desiredChainIdOrChainParameters?.chainId) {
+      if (
+        this.chainId !== desiredChainIdOrChainParameters?.chainId ||
+        this.chainId === undefined
+      ) {
         this.initializeMagicInstance(desiredChainIdOrChainParameters)
       }
 

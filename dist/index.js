@@ -76,7 +76,8 @@ class MagicConnect extends types_1.Connector {
         return __awaiter(this, void 0, void 0, function* () {
             const cancelActivation = this.actions.startActivation();
             try {
-                if (this.chainId !== (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId)) {
+                if (this.chainId !== (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) ||
+                    this.chainId === undefined) {
                     this.initializeMagicInstance(desiredChainIdOrChainParameters);
                 }
                 yield this.isomorphicInitialize();
