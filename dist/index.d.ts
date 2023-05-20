@@ -1,7 +1,5 @@
 import { Connector, Actions, AddEthereumChainParameter } from "@web3-react/types";
 import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk";
-import { RPCProviderModule } from "@magic-sdk/provider/dist/types/modules/rpc-provider";
-import { AbstractProvider } from "web3-core";
 export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguration {
     apiKey: string;
     networkOptions: {
@@ -19,7 +17,7 @@ export interface MagicConnectConstructorArgs {
     onError?: (error: Error) => void;
 }
 export declare class MagicConnect extends Connector {
-    provider?: RPCProviderModule & AbstractProvider;
+    provider?: any;
     magic?: Magic;
     chainId?: number;
     private eagerConnection?;
@@ -29,12 +27,11 @@ export declare class MagicConnect extends Connector {
     private disconnectListener;
     private chainChangedListener;
     private accountsChangedListener;
-    private isomorphicInitialize;
+    private setEventListeners;
+    private removeEventListeners;
     private initializeMagicInstance;
     private handleActivation;
-    /** {@inheritdoc Connector.connectEagerly} */
     connectEagerly(): Promise<void>;
     activate(desiredChainIdOrChainParameters?: AddEthereumChainParameter): Promise<void>;
-    /** {@inheritdoc Connector.deactivate} */
     deactivate(): Promise<void>;
 }

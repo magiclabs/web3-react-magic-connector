@@ -35,7 +35,8 @@ export interface MagicConnectConstructorArgs {
 }
 
 export class MagicConnect extends Connector {
-  public provider?: RPCProviderModule & AbstractProvider
+  // public provider?: RPCProviderModule & AbstractProvider
+  public provider?: any
   public magic?: Magic
   public chainId?: number
   private eagerConnection?: Promise<void>
@@ -44,6 +45,7 @@ export class MagicConnect extends Connector {
   constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
     super(actions, onError)
     this.options = options
+    this.initializeMagicInstance()
   }
 
   private connectListener = ({ chainId }: ProviderConnectInfo): void => {
@@ -67,23 +69,33 @@ export class MagicConnect extends Connector {
     }
   }
 
-  private async isomorphicInitialize(): Promise<void> {
-    if (this.eagerConnection) return
-
+  private setEventListeners(): void {
     if (this.provider) {
       this.provider.on("connect", this.connectListener)
       this.provider.on("disconnect", this.disconnectListener)
       this.provider.on("chainChanged", this.chainChangedListener)
       this.provider.on("accountsChanged", this.accountsChangedListener)
-
-      this.eagerConnection = Promise.resolve()
     }
   }
 
-  private initializeMagicInstance(
+  private removeEventListeners(): void {
+    if (this.provider) {
+      this.provider.off("connect", this.connectListener)
+      this.provider.off("disconnect", this.disconnectListener)
+      this.provider.off("chainChanged", this.chainChangedListener)
+      this.provider.off("accountsChanged", this.accountsChangedListener)
+    }
+  }
+
+  private async initializeMagicInstance(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
-  ): void {
+  ): Promise<void> {
+    console.log("initializeMagicInstance")
+    // Extract apiKey and networkOptions from options
     const { apiKey, networkOptions } = this.options
+
+    // Create a new Magic instance with either the desired ChainId or ChainParameters
+    // or with the networkOptions if no parameters were passed to the function
     this.magic = new Magic(apiKey, {
       network: desiredChainIdOrChainParameters
         ? {
@@ -96,34 +108,73 @@ export class MagicConnect extends Connector {
           },
     })
 
-    this.provider = this.magic.rpcProvider
+    // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
     this.chainId =
       desiredChainIdOrChainParameters?.chainId || networkOptions.chainId
+
+    // Set the provider to the rpcProvider of the new Magic instance
+    this.provider = this.magic.rpcProvider
   }
 
   private async handleActivation(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
   ): Promise<void> {
+    console.log("handleActivation")
     const cancelActivation = this.actions.startActivation()
 
     try {
+      // Initialize Magic if necessary
       if (
-        this.chainId !== desiredChainIdOrChainParameters?.chainId ||
-        this.chainId === undefined
+        this.chainId === undefined ||
+        this.chainId !== desiredChainIdOrChainParameters?.chainId
       ) {
-        this.initializeMagicInstance(desiredChainIdOrChainParameters)
+        await this.initializeMagicInstance(desiredChainIdOrChainParameters)
       }
 
-      await this.isomorphicInitialize()
-      if (!this.provider) {
-        throw new Error("No existing connection")
+      // Check if the user is logged in
+      const isLoggedIn = await this.magic?.user.isLoggedIn()
+      console.log("handleActivation isLoggedIn: ", isLoggedIn)
+
+      // If the user is not logged in, connect with the Magic UI
+      if (!isLoggedIn) {
+        await this.magic?.wallet.connectWithUI()
       }
 
+      // Get the provider and set up event listeners (metamask)
+      // Without this step, connecting to metamask will not work
+      this.provider = await this.magic?.wallet.getProvider()
+
+      // Handle network switch for metamask because it uses different provider
+      // This throws error when connected with Magic because "wallet_switchEthereumChain" does not exist on magic provider
+
+      // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
+      // const wallet = await this.magic?.wallet.getInfo()
+      // if (wallet?.walletType === "metamask") {
+      try {
+        const desiredChainIdHex = `0x${desiredChainIdOrChainParameters!.chainId.toString(
+          16
+        )}`
+        this.provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: desiredChainIdHex }],
+        })
+      } catch (error) {
+        console.log("wallet_switchEthereumChain: ", error)
+      }
+
+      this.setEventListeners()
+      console.log("handleActivation provider", this.provider)
+
+      // Get the current chainId and accounts
       const [chainId, accounts] = await Promise.all([
         this.provider.request({ method: "eth_chainId" }) as Promise<string>,
         this.provider.request({ method: "eth_accounts" }) as Promise<string[]>,
       ])
 
+      console.log("chainId: ", parseChainId(chainId))
+      console.log("accounts: ", accounts)
+
+      // Update the state with the current chainId and accounts
       this.actions.update({ chainId: parseChainId(chainId), accounts })
     } catch (error) {
       cancelActivation()
@@ -132,13 +183,11 @@ export class MagicConnect extends Connector {
     }
   }
 
-  /** {@inheritdoc Connector.connectEagerly} */
   public async connectEagerly(): Promise<void> {
-    const walletInfo = await this.magic?.wallet.getInfo()
-    if (!walletInfo) {
-      throw new Error("No connected wallet")
-    }
-
+    console.log("connectEagerly")
+    const isLoggedIn = await this.magic?.user.isLoggedIn()
+    console.log("connectEagerly isLoggedIn: ", isLoggedIn)
+    if (!isLoggedIn) return
     await this.handleActivation()
   }
 
@@ -148,18 +197,10 @@ export class MagicConnect extends Connector {
     await this.handleActivation(desiredChainIdOrChainParameters)
   }
 
-  /** {@inheritdoc Connector.deactivate} */
   public async deactivate(): Promise<void> {
-    if (this.provider) {
-      this.provider.off("connect", this.connectListener)
-      this.provider.off("disconnect", this.disconnectListener)
-      this.provider.off("chainChanged", this.chainChangedListener)
-      this.provider.off("accountsChanged", this.accountsChangedListener)
-
-      await this.magic?.wallet.disconnect()
-    }
-
+    await this.magic?.user.logout()
     this.eagerConnection = undefined
     this.actions.resetState()
+    this.removeEventListeners()
   }
 }
