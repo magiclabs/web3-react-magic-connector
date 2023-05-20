@@ -112,7 +112,7 @@ class MagicConnect extends types_1.Connector {
                 // if (wallet?.walletType === "metamask") {
                 try {
                     const desiredChainIdHex = `0x${desiredChainIdOrChainParameters.chainId.toString(16)}`;
-                    this.provider.request({
+                    yield this.provider.request({
                         method: "wallet_switchEthereumChain",
                         params: [{ chainId: desiredChainIdHex }],
                     });

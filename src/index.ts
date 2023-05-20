@@ -154,7 +154,7 @@ export class MagicConnect extends Connector {
         const desiredChainIdHex = `0x${desiredChainIdOrChainParameters!.chainId.toString(
           16
         )}`
-        this.provider.request({
+        await this.provider.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: desiredChainIdHex }],
         })
