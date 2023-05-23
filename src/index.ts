@@ -10,7 +10,6 @@ import {
 import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk"
 import { RPCProviderModule } from "@magic-sdk/provider/dist/types/modules/rpc-provider"
 import { AbstractProvider } from "web3-core"
-import { isConstructorDeclaration } from "typescript"
 
 function parseChainId(chainId: string | number) {
   return typeof chainId === "number"
@@ -59,47 +58,54 @@ export class MagicConnect extends Connector {
     this.initializeMagicInstance()
   }
 
-  // private connectListener = ({ chainId }: ProviderConnectInfo): void => {
-  //   this.actions.update({ chainId: parseChainId(chainId) })
-  // }
+  private connectListener = ({ chainId }: ProviderConnectInfo): void => {
+    this.actions.update({ chainId: parseChainId(chainId) })
+  }
 
-  // private disconnectListener = (error?: ProviderRpcError): void => {
-  //   this.actions.resetState()
-  //   if (error) this.onError?.(error)
-  // }
+  private disconnectListener = (error?: ProviderRpcError): void => {
+    this.actions.resetState()
+    if (error) this.onError?.(error)
+  }
 
-  // private chainChangedListener = (chainId: number | string): void => {
-  //   this.actions.update({ chainId: parseChainId(chainId) })
-  // }
+  private chainChangedListener = (chainId: number | string): void => {
+    this.actions.update({ chainId: parseChainId(chainId) })
+  }
 
-  // private accountsChangedListener = (accounts: string[]): void => {
-  //   if (accounts.length === 0) {
-  //     this.actions.resetState()
-  //   } else {
-  //     this.actions.update({ accounts })
-  //   }
-  // }
+  private accountsChangedListener = (accounts: string[]): void => {
+    if (accounts.length === 0) {
+      this.actions.resetState()
+    } else {
+      this.actions.update({ accounts })
+    }
+  }
 
-  // private setEventListeners(): void {
-  //   if (this.provider) {
-  //     this.provider.on("connect", this.connectListener)
-  //     this.provider.on("disconnect", this.disconnectListener)
-  //     this.provider.on("chainChanged", this.chainChangedListener)
-  //     this.provider.on("accountsChanged", this.accountsChangedListener)
-  //   }
-  // }
+  private setEventListeners(): void {
+    if (this.provider) {
+      this.provider.on("connect", this.connectListener)
+      this.provider.on("disconnect", this.disconnectListener)
+      this.provider.on("chainChanged", this.chainChangedListener)
+      this.provider.on("accountsChanged", this.accountsChangedListener)
+    }
+  }
 
-  // private removeEventListeners(): void {
-  //   if (this.provider) {
-  //     this.provider.removeListener("connect", this.connectListener)
-  //     this.provider.removeListener("disconnect", this.disconnectListener)
-  //     this.provider.removeListener("chainChanged", this.chainChangedListener)
-  //     this.provider.removeListener(
-  //       "accountsChanged",
-  //       this.accountsChangedListener
-  //     )
-  //   }
-  // }
+  private removeEventListeners(): void {
+    if (this.provider)
+      try {
+        this.provider.removeListener("connect", this.connectListener)
+        this.provider.removeListener("disconnect", this.disconnectListener)
+        this.provider.removeListener("chainChanged", this.chainChangedListener)
+        this.provider.removeListener(
+          "accountsChanged",
+          this.accountsChangedListener
+        )
+        // this.provider.off("connect", this.connectListener)
+        // this.provider.off("disconnect", this.disconnectListener)
+        // this.provider.off("chainChanged", this.chainChangedListener)
+        // this.provider.off("accountsChanged", this.accountsChangedListener)
+      } catch (error) {
+        console.log(error)
+      }
+  }
 
   private async initializeMagicInstance(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
@@ -190,7 +196,7 @@ export class MagicConnect extends Connector {
       // Get the provider (metamask) and set up event listeners
       // Without this step, connecting to metamask will not work
       this.provider = await this.getProvider(this.magic!)
-      // this.setEventListeners()
+      this.setEventListeners()
 
       // Handle network switch for metamask because it uses different provider
       // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
@@ -229,6 +235,7 @@ export class MagicConnect extends Connector {
 
   // "autoconnect"
   public async connectEagerly(): Promise<void> {
+    console.log("CONNECT EAGERLY")
     const isLoggedIn = await this.checkLoggedInStatus()
     if (!isLoggedIn) return
     await this.handleActivation()
@@ -245,7 +252,7 @@ export class MagicConnect extends Connector {
   public async deactivate(): Promise<void> {
     this.actions.resetState()
     await this.magic?.wallet.disconnect()
-    // this.removeEventListeners()
-    this.provider = undefined
+    this.removeEventListeners()
+    this.provider = this.getProvider(this.magic!)
   }
 }

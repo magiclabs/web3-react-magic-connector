@@ -22,6 +22,12 @@ export declare class MagicConnect extends Connector {
     chainId?: number;
     private readonly options;
     constructor({ actions, options, onError }: MagicConnectConstructorArgs);
+    private connectListener;
+    private disconnectListener;
+    private chainChangedListener;
+    private accountsChangedListener;
+    private setEventListeners;
+    private removeEventListeners;
     private initializeMagicInstance;
     private getProvider;
     private checkLoggedInStatus;

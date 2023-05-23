@@ -20,46 +20,54 @@ function parseChainId(chainId) {
 class MagicConnect extends types_1.Connector {
     constructor({ actions, options, onError }) {
         super(actions, onError);
+        this.connectListener = ({ chainId }) => {
+            this.actions.update({ chainId: parseChainId(chainId) });
+        };
+        this.disconnectListener = (error) => {
+            var _a;
+            this.actions.resetState();
+            if (error)
+                (_a = this.onError) === null || _a === void 0 ? void 0 : _a.call(this, error);
+        };
+        this.chainChangedListener = (chainId) => {
+            this.actions.update({ chainId: parseChainId(chainId) });
+        };
+        this.accountsChangedListener = (accounts) => {
+            if (accounts.length === 0) {
+                this.actions.resetState();
+            }
+            else {
+                this.actions.update({ accounts });
+            }
+        };
         this.options = options;
         // Initializing Magic Instance in constructor otherwise it will be undefined when calling connectEagerly
         this.initializeMagicInstance();
     }
-    // private connectListener = ({ chainId }: ProviderConnectInfo): void => {
-    //   this.actions.update({ chainId: parseChainId(chainId) })
-    // }
-    // private disconnectListener = (error?: ProviderRpcError): void => {
-    //   this.actions.resetState()
-    //   if (error) this.onError?.(error)
-    // }
-    // private chainChangedListener = (chainId: number | string): void => {
-    //   this.actions.update({ chainId: parseChainId(chainId) })
-    // }
-    // private accountsChangedListener = (accounts: string[]): void => {
-    //   if (accounts.length === 0) {
-    //     this.actions.resetState()
-    //   } else {
-    //     this.actions.update({ accounts })
-    //   }
-    // }
-    // private setEventListeners(): void {
-    //   if (this.provider) {
-    //     this.provider.on("connect", this.connectListener)
-    //     this.provider.on("disconnect", this.disconnectListener)
-    //     this.provider.on("chainChanged", this.chainChangedListener)
-    //     this.provider.on("accountsChanged", this.accountsChangedListener)
-    //   }
-    // }
-    // private removeEventListeners(): void {
-    //   if (this.provider) {
-    //     this.provider.removeListener("connect", this.connectListener)
-    //     this.provider.removeListener("disconnect", this.disconnectListener)
-    //     this.provider.removeListener("chainChanged", this.chainChangedListener)
-    //     this.provider.removeListener(
-    //       "accountsChanged",
-    //       this.accountsChangedListener
-    //     )
-    //   }
-    // }
+    setEventListeners() {
+        if (this.provider) {
+            this.provider.on("connect", this.connectListener);
+            this.provider.on("disconnect", this.disconnectListener);
+            this.provider.on("chainChanged", this.chainChangedListener);
+            this.provider.on("accountsChanged", this.accountsChangedListener);
+        }
+    }
+    removeEventListeners() {
+        if (this.provider)
+            try {
+                this.provider.removeListener("connect", this.connectListener);
+                this.provider.removeListener("disconnect", this.disconnectListener);
+                this.provider.removeListener("chainChanged", this.chainChangedListener);
+                this.provider.removeListener("accountsChanged", this.accountsChangedListener);
+                // this.provider.off("connect", this.connectListener)
+                // this.provider.off("disconnect", this.disconnectListener)
+                // this.provider.off("chainChanged", this.chainChangedListener)
+                // this.provider.off("accountsChanged", this.accountsChangedListener)
+            }
+            catch (error) {
+                console.log(error);
+            }
+    }
     initializeMagicInstance(desiredChainIdOrChainParameters) {
         return __awaiter(this, void 0, void 0, function* () {
             if (typeof window !== "undefined") {
@@ -139,7 +147,7 @@ class MagicConnect extends types_1.Connector {
                 // Get the provider (metamask) and set up event listeners
                 // Without this step, connecting to metamask will not work
                 this.provider = yield this.getProvider(this.magic);
-                // this.setEventListeners()
+                this.setEventListeners();
                 // Handle network switch for metamask because it uses different provider
                 // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
                 // const wallet = await this.magic?.wallet.getInfo()
@@ -175,6 +183,7 @@ class MagicConnect extends types_1.Connector {
     // "autoconnect"
     connectEagerly() {
         return __awaiter(this, void 0, void 0, function* () {
+            console.log("CONNECT EAGERLY");
             const isLoggedIn = yield this.checkLoggedInStatus();
             if (!isLoggedIn)
                 return;
@@ -193,8 +202,8 @@ class MagicConnect extends types_1.Connector {
         return __awaiter(this, void 0, void 0, function* () {
             this.actions.resetState();
             yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
-            // this.removeEventListeners()
-            this.provider = undefined;
+            this.removeEventListeners();
+            this.provider = this.getProvider(this.magic);
         });
     }
 }
