@@ -46,7 +46,7 @@ export interface MagicConnectConstructorArgs {
 
 export class MagicConnect extends Connector {
   // public provider?: (RPCProviderModule & AbstractProvider) | Provider
-  public provider?: any
+  public provider?: RPCProviderModule & AbstractProvider
   public magic?: Magic
   public chainId?: number
   private readonly options: MagicConnectorSDKOptions
@@ -107,9 +107,9 @@ export class MagicConnect extends Connector {
       }
   }
 
-  private async initializeMagicInstance(
+  private initializeMagicInstance(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
-  ): Promise<void> {
+  ) {
     if (typeof window !== "undefined") {
       console.log("INITIALIZE MAGIC INSTANCE")
 
@@ -143,32 +143,33 @@ export class MagicConnect extends Connector {
     return provider
   }
 
-  // Check if the user is logged to determine whether to display magic connect login ui
+  // Check if the user is logged to determine whether to
+  // display magic connect login ui
   private async checkLoggedInStatus() {
     console.log("CHECK LOGGED IN STATUS")
 
     // Check if the user is logged in with magic
-    let magicIsLoggedIn = false
-    if (this.magic) {
-      // Not sure if this is supposed to be used with Magic Connect
-      magicIsLoggedIn = await this.magic.user.isLoggedIn()
-    }
-    console.log("magicIsLoggedIn", magicIsLoggedIn)
+    // let magicIsLoggedIn = false
+    // if (this.magic) {
+    //   // Not sure if this is supposed to be used with Magic Connect
+    //   magicIsLoggedIn = await this.magic.user.isLoggedIn()
+    // }
+    // console.log("magicIsLoggedIn", magicIsLoggedIn)
 
-    // Check if the user is connected with metamask using the provider
-    // When network switching, magic sometimes returns false when the user is connected with metamask
-    // Possible due to reinitializing magic instance
-    let metamaskIsConnected = false
-    if (
-      this.provider &&
-      "isConnected" in this.provider &&
-      this.provider.isConnected
-    ) {
-      metamaskIsConnected = this.provider.isConnected()
-      console.log("metamaskIsConnected", metamaskIsConnected)
-      // console.log(this.provider.isConnected)
-    }
-    return magicIsLoggedIn || metamaskIsConnected
+    // // Check if the user is connected with metamask using the provider
+    // // When network switching, magic sometimes returns false when the user is connected with metamask
+    // // Possible due to reinitializing magic instance
+    // let metamaskIsConnected = false
+    // if (
+    //   this.provider &&
+    //   "isConnected" in this.provider &&
+    //   this.provider.isConnected
+    // ) {
+    //   metamaskIsConnected = this.provider.isConnected()
+    //   console.log("metamaskIsConnected", metamaskIsConnected)
+    //   // console.log(this.provider.isConnected)
+    // }
+    return (await this.magic?.user.isLoggedIn()) ?? false //magicIsLoggedIn || metamaskIsConnected
   }
 
   private async handleActivation(
@@ -178,6 +179,8 @@ export class MagicConnect extends Connector {
     const cancelActivation = this.actions.startActivation()
 
     try {
+      const isLoggedIn = await this.checkLoggedInStatus()
+
       // Reinitialize Magic Instance to handle network switch
       // if (
       //   this.chainId === undefined ||
@@ -185,8 +188,6 @@ export class MagicConnect extends Connector {
       // ) {
       await this.initializeMagicInstance(desiredChainIdOrChainParameters)
       // }
-
-      const isLoggedIn = await this.checkLoggedInStatus()
 
       // If the user is not logged in, connect with the Magic UI
       if (!isLoggedIn) {
@@ -198,11 +199,15 @@ export class MagicConnect extends Connector {
       this.provider = await this.getProvider(this.magic!)
       this.setEventListeners()
 
-      // Handle network switch for metamask because it uses different provider
+      // Handle for metamask
       // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
       // const wallet = await this.magic?.wallet.getInfo()
       // if (wallet?.walletType === "metamask") {
-      if ("isMetaMask" in this.provider && desiredChainIdOrChainParameters) {
+      if (
+        this.provider &&
+        "isMetaMask" in this.provider &&
+        desiredChainIdOrChainParameters
+      ) {
         try {
           const desiredChainIdHex = `0x${desiredChainIdOrChainParameters!.chainId.toString(
             16
@@ -253,6 +258,8 @@ export class MagicConnect extends Connector {
     this.actions.resetState()
     await this.magic?.wallet.disconnect()
     this.removeEventListeners()
-    this.provider = this.getProvider(this.magic!)
+    if (this.magic) {
+      this.provider = await this.getProvider(this.magic)
+    }
   }
 }
