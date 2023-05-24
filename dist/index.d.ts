@@ -1,5 +1,7 @@
 import { Connector, Actions, AddEthereumChainParameter } from "@web3-react/types";
 import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk";
+import { RPCProviderModule } from "@magic-sdk/provider/dist/types/modules/rpc-provider";
+import { AbstractProvider } from "web3-core";
 export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguration {
     apiKey: string;
     networkOptions: {
@@ -7,17 +9,13 @@ export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguratio
         chainId: number;
     };
 }
-/**
- * @param options - Options to pass to `magic-sdk`.
- * @param onError - Handler to report errors thrown from eventListeners.
- */
 export interface MagicConnectConstructorArgs {
     actions: Actions;
     options: MagicConnectorSDKOptions;
     onError?: (error: Error) => void;
 }
 export declare class MagicConnect extends Connector {
-    provider?: any;
+    provider?: RPCProviderModule & AbstractProvider;
     magic?: Magic;
     chainId?: number;
     private readonly options;

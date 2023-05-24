@@ -53,45 +53,35 @@ class MagicConnect extends types_1.Connector {
         }
     }
     removeEventListeners() {
-        if (this.provider)
-            try {
-                this.provider.removeListener("connect", this.connectListener);
-                this.provider.removeListener("disconnect", this.disconnectListener);
-                this.provider.removeListener("chainChanged", this.chainChangedListener);
-                this.provider.removeListener("accountsChanged", this.accountsChangedListener);
-                // this.provider.off("connect", this.connectListener)
-                // this.provider.off("disconnect", this.disconnectListener)
-                // this.provider.off("chainChanged", this.chainChangedListener)
-                // this.provider.off("accountsChanged", this.accountsChangedListener)
-            }
-            catch (error) {
-                console.log(error);
-            }
+        if (this.provider) {
+            this.provider.removeListener("connect", this.connectListener);
+            this.provider.removeListener("disconnect", this.disconnectListener);
+            this.provider.removeListener("chainChanged", this.chainChangedListener);
+            this.provider.removeListener("accountsChanged", this.accountsChangedListener);
+        }
     }
     initializeMagicInstance(desiredChainIdOrChainParameters) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (typeof window !== "undefined") {
-                console.log("INITIALIZE MAGIC INSTANCE");
-                // Extract apiKey and networkOptions from options
-                const { apiKey, networkOptions } = this.options;
-                // Create a new Magic instance with desired ChainId for network switching
-                // or with the networkOptions if no parameters were passed to the function
-                this.magic = new magic_sdk_1.Magic(apiKey, {
-                    network: desiredChainIdOrChainParameters
-                        ? {
-                            rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
-                            chainId: desiredChainIdOrChainParameters.chainId,
-                        }
-                        : {
-                            rpcUrl: networkOptions.rpcUrl,
-                            chainId: networkOptions.chainId,
-                        },
-                });
-                // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
-                this.chainId =
-                    (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
-            }
-        });
+        if (typeof window !== "undefined") {
+            console.log("INITIALIZE MAGIC INSTANCE");
+            // Extract apiKey and networkOptions from options
+            const { apiKey, networkOptions } = this.options;
+            // Create a new Magic instance with desired ChainId for network switching
+            // or with the networkOptions if no parameters were passed to the function
+            this.magic = new magic_sdk_1.Magic(apiKey, {
+                network: desiredChainIdOrChainParameters
+                    ? {
+                        rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+                        chainId: desiredChainIdOrChainParameters.chainId,
+                    }
+                    : {
+                        rpcUrl: networkOptions.rpcUrl,
+                        chainId: networkOptions.chainId,
+                    },
+            });
+            // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
+            this.chainId =
+                (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
+        }
     }
     // Get the provider from magicInstance
     getProvider(magicInstance) {
@@ -101,29 +91,21 @@ class MagicConnect extends types_1.Connector {
             return provider;
         });
     }
-    // Check if the user is logged to determine whether to display magic connect login ui
+    // Check if the user is logged to determine whether to
+    // display magic connect login ui
     checkLoggedInStatus() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            console.log("CHECK LOGGED IN STATUS");
-            // Check if the user is logged in with magic
-            let magicIsLoggedIn = false;
-            if (this.magic) {
+            try {
                 // Not sure if this is supposed to be used with Magic Connect
-                magicIsLoggedIn = yield this.magic.user.isLoggedIn();
+                const isLoggedIn = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.user.isLoggedIn());
+                console.log("isLoggedIn: ", isLoggedIn);
+                return isLoggedIn;
             }
-            console.log("magicIsLoggedIn", magicIsLoggedIn);
-            // Check if the user is connected with metamask using the provider
-            // When network switching, magic sometimes returns false when the user is connected with metamask
-            // Possible due to reinitializing magic instance
-            let metamaskIsConnected = false;
-            if (this.provider &&
-                "isConnected" in this.provider &&
-                this.provider.isConnected) {
-                metamaskIsConnected = this.provider.isConnected();
-                console.log("metamaskIsConnected", metamaskIsConnected);
-                // console.log(this.provider.isConnected)
+            catch (error) {
+                console.error("Error checking logged in status:", error);
+                return false;
             }
-            return magicIsLoggedIn || metamaskIsConnected;
         });
     }
     handleActivation(desiredChainIdOrChainParameters) {
@@ -132,14 +114,10 @@ class MagicConnect extends types_1.Connector {
             console.log("HANDLE ACTIVATION");
             const cancelActivation = this.actions.startActivation();
             try {
-                // Reinitialize Magic Instance to handle network switch
-                // if (
-                //   this.chainId === undefined ||
-                //   this.chainId !== desiredChainIdOrChainParameters?.chainId
-                // ) {
-                yield this.initializeMagicInstance(desiredChainIdOrChainParameters);
-                // }
+                // Check if the user is logged in
                 const isLoggedIn = yield this.checkLoggedInStatus();
+                // Initialize the magic instance
+                yield this.initializeMagicInstance(desiredChainIdOrChainParameters);
                 // If the user is not logged in, connect with the Magic UI
                 if (!isLoggedIn) {
                     yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.connectWithUI());
@@ -148,11 +126,12 @@ class MagicConnect extends types_1.Connector {
                 // Without this step, connecting to metamask will not work
                 this.provider = yield this.getProvider(this.magic);
                 this.setEventListeners();
-                // Handle network switch for metamask because it uses different provider
+                // Handle for metamask
                 // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
                 // const wallet = await this.magic?.wallet.getInfo()
-                // if (wallet?.walletType === "metamask") {
-                if ("isMetaMask" in this.provider && desiredChainIdOrChainParameters) {
+                if (this.provider &&
+                    "isMetaMask" in this.provider &&
+                    desiredChainIdOrChainParameters) {
                     try {
                         const desiredChainIdHex = `0x${desiredChainIdOrChainParameters.chainId.toString(16)}`;
                         yield this.provider.request({
@@ -203,7 +182,9 @@ class MagicConnect extends types_1.Connector {
             this.actions.resetState();
             yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
             this.removeEventListeners();
-            this.provider = this.getProvider(this.magic);
+            if (this.magic) {
+                this.provider = yield this.getProvider(this.magic);
+            }
         });
     }
 }
