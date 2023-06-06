@@ -27,7 +27,6 @@ export declare class MagicConnect extends Connector {
     private setEventListeners;
     private removeEventListeners;
     private initializeMagicInstance;
-    private getProvider;
     private checkLoggedInStatus;
     private handleActivation;
     connectEagerly(): Promise<void>;

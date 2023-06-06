@@ -1,7 +1,6 @@
 import {
   Connector,
   Actions,
-  Provider,
   ProviderConnectInfo,
   ProviderRpcError,
   AddEthereumChainParameter,
@@ -26,14 +25,6 @@ export interface MagicConnectorSDKOptions
   }
 }
 
-// type MetaMaskProvider = Provider & {
-//   isMetaMask?: boolean
-//   isConnected?: () => boolean
-//   providers?: MetaMaskProvider[]
-//   get chainId(): string
-//   get accounts(): string[]
-// }
-
 export interface MagicConnectConstructorArgs {
   actions: Actions
   options: MagicConnectorSDKOptions
@@ -41,7 +32,6 @@ export interface MagicConnectConstructorArgs {
 }
 
 export class MagicConnect extends Connector {
-  // public provider?: (RPCProviderModule & AbstractProvider) | Provider
   public provider?: RPCProviderModule & AbstractProvider
   public magic?: Magic
   public chainId?: number
@@ -86,13 +76,10 @@ export class MagicConnect extends Connector {
 
   private removeEventListeners(): void {
     if (this.provider) {
-      this.provider.removeListener("connect", this.connectListener)
-      this.provider.removeListener("disconnect", this.disconnectListener)
-      this.provider.removeListener("chainChanged", this.chainChangedListener)
-      this.provider.removeListener(
-        "accountsChanged",
-        this.accountsChangedListener
-      )
+      this.provider.off("connect", this.connectListener)
+      this.provider.off("disconnect", this.disconnectListener)
+      this.provider.off("chainChanged", this.chainChangedListener)
+      this.provider.off("accountsChanged", this.accountsChangedListener)
     }
   }
 
@@ -100,8 +87,6 @@ export class MagicConnect extends Connector {
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
   ) {
     if (typeof window !== "undefined") {
-      console.log("INITIALIZE MAGIC INSTANCE")
-
       // Extract apiKey and networkOptions from options
       const { apiKey, networkOptions } = this.options
 
@@ -119,29 +104,20 @@ export class MagicConnect extends Connector {
             },
       })
 
+      // Get the provider from magicInstance
+      this.provider = this.magic.rpcProvider
+
       // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
       this.chainId =
         desiredChainIdOrChainParameters?.chainId || networkOptions.chainId
     }
   }
 
-  // Get the provider from magicInstance
-  private async getProvider(magicInstance: Magic): Promise<any> {
-    const provider = await magicInstance.wallet.getProvider()
-    console.log("provider", provider)
-    return provider
-  }
-
-  // Check if the user is logged to determine whether to
-  // display magic connect login ui
   private async checkLoggedInStatus() {
     try {
-      // Not sure if this is supposed to be used with Magic Connect
       const isLoggedIn = await this.magic?.user.isLoggedIn()
-      console.log("isLoggedIn: ", isLoggedIn)
       return isLoggedIn
     } catch (error) {
-      console.error("Error checking logged in status:", error)
       return false
     }
   }
@@ -149,46 +125,15 @@ export class MagicConnect extends Connector {
   private async handleActivation(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
   ): Promise<void> {
-    console.log("HANDLE ACTIVATION")
     const cancelActivation = this.actions.startActivation()
 
     try {
-      // Check if the user is logged in
-      const isLoggedIn = await this.checkLoggedInStatus()
-
       // Initialize the magic instance
       await this.initializeMagicInstance(desiredChainIdOrChainParameters)
 
-      // If the user is not logged in, connect with the Magic UI
-      if (!isLoggedIn) {
-        await this.magic?.wallet.connectWithUI()
-      }
+      await this.magic?.wallet.connectWithUI()
 
-      // Get the provider (metamask) and set up event listeners
-      // Without this step, connecting to metamask will not work
-      this.provider = await this.getProvider(this.magic!)
       this.setEventListeners()
-
-      // Handle for metamask
-      // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
-      // const wallet = await this.magic?.wallet.getInfo()
-      if (
-        this.provider &&
-        "isMetaMask" in this.provider &&
-        desiredChainIdOrChainParameters
-      ) {
-        try {
-          const desiredChainIdHex = `0x${desiredChainIdOrChainParameters!.chainId.toString(
-            16
-          )}`
-          await this.provider.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: desiredChainIdHex }],
-          })
-        } catch (error) {
-          console.log("wallet_switchEthereumChain: ", error)
-        }
-      }
 
       // Get the current chainId and account from the provider
       const [chainId, accounts] = await Promise.all([
@@ -196,20 +141,15 @@ export class MagicConnect extends Connector {
         this.provider?.request({ method: "eth_accounts" }) as Promise<string[]>,
       ])
 
-      console.log("chainId: ", parseChainId(chainId))
-      console.log("accounts: ", accounts)
-
       // Update the connector state with the current chainId and account
       this.actions.update({ chainId: parseChainId(chainId), accounts })
     } catch (error) {
       cancelActivation()
-      throw error
     }
   }
 
   // "autoconnect"
   public async connectEagerly(): Promise<void> {
-    console.log("CONNECT EAGERLY")
     const isLoggedIn = await this.checkLoggedInStatus()
     if (!isLoggedIn) return
     await this.handleActivation()
@@ -227,8 +167,5 @@ export class MagicConnect extends Connector {
     this.actions.resetState()
     await this.magic?.wallet.disconnect()
     this.removeEventListeners()
-    if (this.magic) {
-      this.provider = await this.getProvider(this.magic)
-    }
   }
 }

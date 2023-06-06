@@ -54,15 +54,14 @@ class MagicConnect extends types_1.Connector {
     }
     removeEventListeners() {
         if (this.provider) {
-            this.provider.removeListener("connect", this.connectListener);
-            this.provider.removeListener("disconnect", this.disconnectListener);
-            this.provider.removeListener("chainChanged", this.chainChangedListener);
-            this.provider.removeListener("accountsChanged", this.accountsChangedListener);
+            this.provider.off("connect", this.connectListener);
+            this.provider.off("disconnect", this.disconnectListener);
+            this.provider.off("chainChanged", this.chainChangedListener);
+            this.provider.off("accountsChanged", this.accountsChangedListener);
         }
     }
     initializeMagicInstance(desiredChainIdOrChainParameters) {
         if (typeof window !== "undefined") {
-            console.log("INITIALIZE MAGIC INSTANCE");
             // Extract apiKey and networkOptions from options
             const { apiKey, networkOptions } = this.options;
             // Create a new Magic instance with desired ChainId for network switching
@@ -78,18 +77,12 @@ class MagicConnect extends types_1.Connector {
                         chainId: networkOptions.chainId,
                     },
             });
+            // Get the provider from magicInstance
+            this.provider = this.magic.rpcProvider;
             // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
             this.chainId =
                 (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
         }
-    }
-    // Get the provider from magicInstance
-    getProvider(magicInstance) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const provider = yield magicInstance.wallet.getProvider();
-            console.log("provider", provider);
-            return provider;
-        });
     }
     // Check if the user is logged to determine whether to
     // display magic connect login ui
@@ -97,13 +90,10 @@ class MagicConnect extends types_1.Connector {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                // Not sure if this is supposed to be used with Magic Connect
                 const isLoggedIn = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.user.isLoggedIn());
-                console.log("isLoggedIn: ", isLoggedIn);
                 return isLoggedIn;
             }
             catch (error) {
-                console.error("Error checking logged in status:", error);
                 return false;
             }
         });
@@ -111,58 +101,28 @@ class MagicConnect extends types_1.Connector {
     handleActivation(desiredChainIdOrChainParameters) {
         var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
-            console.log("HANDLE ACTIVATION");
             const cancelActivation = this.actions.startActivation();
             try {
-                // Check if the user is logged in
-                const isLoggedIn = yield this.checkLoggedInStatus();
                 // Initialize the magic instance
                 yield this.initializeMagicInstance(desiredChainIdOrChainParameters);
-                // If the user is not logged in, connect with the Magic UI
-                if (!isLoggedIn) {
-                    yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.connectWithUI());
-                }
-                // Get the provider (metamask) and set up event listeners
-                // Without this step, connecting to metamask will not work
-                this.provider = yield this.getProvider(this.magic);
+                yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.connectWithUI());
                 this.setEventListeners();
-                // Handle for metamask
-                // Calling any magic.user or magic.wallet method will throw error "User denied account access" when connected with metamask
-                // const wallet = await this.magic?.wallet.getInfo()
-                if (this.provider &&
-                    "isMetaMask" in this.provider &&
-                    desiredChainIdOrChainParameters) {
-                    try {
-                        const desiredChainIdHex = `0x${desiredChainIdOrChainParameters.chainId.toString(16)}`;
-                        yield this.provider.request({
-                            method: "wallet_switchEthereumChain",
-                            params: [{ chainId: desiredChainIdHex }],
-                        });
-                    }
-                    catch (error) {
-                        console.log("wallet_switchEthereumChain: ", error);
-                    }
-                }
                 // Get the current chainId and account from the provider
                 const [chainId, accounts] = yield Promise.all([
                     (_b = this.provider) === null || _b === void 0 ? void 0 : _b.request({ method: "eth_chainId" }),
                     (_c = this.provider) === null || _c === void 0 ? void 0 : _c.request({ method: "eth_accounts" }),
                 ]);
-                console.log("chainId: ", parseChainId(chainId));
-                console.log("accounts: ", accounts);
                 // Update the connector state with the current chainId and account
                 this.actions.update({ chainId: parseChainId(chainId), accounts });
             }
             catch (error) {
                 cancelActivation();
-                throw error;
             }
         });
     }
     // "autoconnect"
     connectEagerly() {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log("CONNECT EAGERLY");
             const isLoggedIn = yield this.checkLoggedInStatus();
             if (!isLoggedIn)
                 return;
@@ -182,9 +142,6 @@ class MagicConnect extends types_1.Connector {
             this.actions.resetState();
             yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
             this.removeEventListeners();
-            if (this.magic) {
-                this.provider = yield this.getProvider(this.magic);
-            }
         });
     }
 }
