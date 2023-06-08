@@ -24,10 +24,7 @@ export interface MagicConnectorSDKOptions
     chainId: number
   }
 }
-/**
- * @param options - Options to pass to `magic-sdk`.
- * @param onError - Handler to report errors thrown from eventListeners.
- */
+
 export interface MagicConnectConstructorArgs {
   actions: Actions
   options: MagicConnectorSDKOptions
@@ -38,12 +35,13 @@ export class MagicConnect extends Connector {
   public provider?: RPCProviderModule & AbstractProvider
   public magic?: Magic
   public chainId?: number
-  private eagerConnection?: Promise<void>
   private readonly options: MagicConnectorSDKOptions
 
   constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
     super(actions, onError)
     this.options = options
+    // Initializing Magic Instance in constructor otherwise it will be undefined when calling connectEagerly
+    this.initializeMagicInstance()
   }
 
   private connectListener = ({ chainId }: ProviderConnectInfo): void => {
@@ -67,38 +65,61 @@ export class MagicConnect extends Connector {
     }
   }
 
-  private async isomorphicInitialize(): Promise<void> {
-    if (this.eagerConnection) return
-
+  private setEventListeners(): void {
     if (this.provider) {
       this.provider.on("connect", this.connectListener)
       this.provider.on("disconnect", this.disconnectListener)
       this.provider.on("chainChanged", this.chainChangedListener)
       this.provider.on("accountsChanged", this.accountsChangedListener)
+    }
+  }
 
-      this.eagerConnection = Promise.resolve()
+  private removeEventListeners(): void {
+    if (this.provider) {
+      this.provider.off("connect", this.connectListener)
+      this.provider.off("disconnect", this.disconnectListener)
+      this.provider.off("chainChanged", this.chainChangedListener)
+      this.provider.off("accountsChanged", this.accountsChangedListener)
     }
   }
 
   private initializeMagicInstance(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
-  ): void {
-    const { apiKey, networkOptions } = this.options
-    this.magic = new Magic(apiKey, {
-      network: desiredChainIdOrChainParameters
-        ? {
-            rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
-            chainId: desiredChainIdOrChainParameters.chainId,
-          }
-        : {
-            rpcUrl: networkOptions.rpcUrl,
-            chainId: networkOptions.chainId,
-          },
-    })
+  ) {
+    if (typeof window !== "undefined") {
+      // Extract apiKey and networkOptions from options
+      const { apiKey, networkOptions } = this.options
 
-    this.provider = this.magic.rpcProvider
-    this.chainId =
-      desiredChainIdOrChainParameters?.chainId || networkOptions.chainId
+      // Create a new Magic instance with desired ChainId for network switching
+      // or with the networkOptions if no parameters were passed to the function
+      this.magic = new Magic(apiKey, {
+        network: desiredChainIdOrChainParameters
+          ? {
+              rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+              chainId: desiredChainIdOrChainParameters.chainId,
+            }
+          : {
+              rpcUrl: networkOptions.rpcUrl,
+              chainId: networkOptions.chainId,
+            },
+      })
+
+      // Get the provider from magicInstance
+      this.provider = this.magic.rpcProvider
+
+      // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
+      this.chainId =
+        desiredChainIdOrChainParameters?.chainId || networkOptions.chainId
+    }
+  }
+
+  private async checkLoggedInStatus() {
+    try {
+      const isLoggedIn = await this.magic?.user.isLoggedIn()
+      return isLoggedIn
+    } catch (error) {
+      return false
+    }
   }
 
   private async handleActivation(
@@ -107,59 +128,44 @@ export class MagicConnect extends Connector {
     const cancelActivation = this.actions.startActivation()
 
     try {
-      if (
-        this.chainId !== desiredChainIdOrChainParameters?.chainId ||
-        this.chainId === undefined
-      ) {
-        this.initializeMagicInstance(desiredChainIdOrChainParameters)
-      }
+      // Initialize the magic instance
+      await this.initializeMagicInstance(desiredChainIdOrChainParameters)
 
-      await this.isomorphicInitialize()
-      if (!this.provider) {
-        throw new Error("No existing connection")
-      }
+      await this.magic?.wallet.connectWithUI()
 
+      this.setEventListeners()
+
+      // Get the current chainId and account from the provider
       const [chainId, accounts] = await Promise.all([
-        this.provider.request({ method: "eth_chainId" }) as Promise<string>,
-        this.provider.request({ method: "eth_accounts" }) as Promise<string[]>,
+        this.provider?.request({ method: "eth_chainId" }) as Promise<string>,
+        this.provider?.request({ method: "eth_accounts" }) as Promise<string[]>,
       ])
 
+      // Update the connector state with the current chainId and account
       this.actions.update({ chainId: parseChainId(chainId), accounts })
     } catch (error) {
       cancelActivation()
-      this.eagerConnection = undefined
-      throw error
     }
   }
 
-  /** {@inheritdoc Connector.connectEagerly} */
+  // "autoconnect"
   public async connectEagerly(): Promise<void> {
-    const walletInfo = await this.magic?.wallet.getInfo()
-    if (!walletInfo) {
-      throw new Error("No connected wallet")
-    }
-
+    const isLoggedIn = await this.checkLoggedInStatus()
+    if (!isLoggedIn) return
     await this.handleActivation()
   }
 
+  // "connect"
   public async activate(
     desiredChainIdOrChainParameters?: AddEthereumChainParameter
   ): Promise<void> {
     await this.handleActivation(desiredChainIdOrChainParameters)
   }
 
-  /** {@inheritdoc Connector.deactivate} */
+  // "disconnect"
   public async deactivate(): Promise<void> {
-    if (this.provider) {
-      this.provider.off("connect", this.connectListener)
-      this.provider.off("disconnect", this.disconnectListener)
-      this.provider.off("chainChanged", this.chainChangedListener)
-      this.provider.off("accountsChanged", this.accountsChangedListener)
-
-      await this.magic?.wallet.disconnect()
-    }
-
-    this.eagerConnection = undefined
     this.actions.resetState()
+    await this.magic?.wallet.disconnect()
+    this.removeEventListeners()
   }
 }

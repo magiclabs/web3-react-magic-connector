@@ -41,91 +41,107 @@ class MagicConnect extends types_1.Connector {
             }
         };
         this.options = options;
+        // Initializing Magic Instance in constructor otherwise it will be undefined when calling connectEagerly
+        this.initializeMagicInstance();
     }
-    isomorphicInitialize() {
+    setEventListeners() {
+        if (this.provider) {
+            this.provider.on("connect", this.connectListener);
+            this.provider.on("disconnect", this.disconnectListener);
+            this.provider.on("chainChanged", this.chainChangedListener);
+            this.provider.on("accountsChanged", this.accountsChangedListener);
+        }
+    }
+    removeEventListeners() {
+        if (this.provider) {
+            this.provider.off("connect", this.connectListener);
+            this.provider.off("disconnect", this.disconnectListener);
+            this.provider.off("chainChanged", this.chainChangedListener);
+            this.provider.off("accountsChanged", this.accountsChangedListener);
+        }
+    }
+    initializeMagicInstance(desiredChainIdOrChainParameters) {
+        if (typeof window !== "undefined") {
+            // Extract apiKey and networkOptions from options
+            const { apiKey, networkOptions } = this.options;
+            // Create a new Magic instance with desired ChainId for network switching
+            // or with the networkOptions if no parameters were passed to the function
+            this.magic = new magic_sdk_1.Magic(apiKey, {
+                network: desiredChainIdOrChainParameters
+                    ? {
+                        rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
+                        chainId: desiredChainIdOrChainParameters.chainId,
+                    }
+                    : {
+                        rpcUrl: networkOptions.rpcUrl,
+                        chainId: networkOptions.chainId,
+                    },
+            });
+            // Get the provider from magicInstance
+            this.provider = this.magic.rpcProvider;
+            // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
+            this.chainId =
+                (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
+        }
+    }
+    // Check if the user is logged to determine whether to
+    // display magic connect login ui
+    checkLoggedInStatus() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.eagerConnection)
-                return;
-            if (this.provider) {
-                this.provider.on("connect", this.connectListener);
-                this.provider.on("disconnect", this.disconnectListener);
-                this.provider.on("chainChanged", this.chainChangedListener);
-                this.provider.on("accountsChanged", this.accountsChangedListener);
-                this.eagerConnection = Promise.resolve();
+            try {
+                const isLoggedIn = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.user.isLoggedIn());
+                return isLoggedIn;
+            }
+            catch (error) {
+                return false;
             }
         });
     }
-    initializeMagicInstance(desiredChainIdOrChainParameters) {
-        const { apiKey, networkOptions } = this.options;
-        this.magic = new magic_sdk_1.Magic(apiKey, {
-            network: desiredChainIdOrChainParameters
-                ? {
-                    rpcUrl: desiredChainIdOrChainParameters.rpcUrls[0],
-                    chainId: desiredChainIdOrChainParameters.chainId,
-                }
-                : {
-                    rpcUrl: networkOptions.rpcUrl,
-                    chainId: networkOptions.chainId,
-                },
-        });
-        this.provider = this.magic.rpcProvider;
-        this.chainId =
-            (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
-    }
     handleActivation(desiredChainIdOrChainParameters) {
+        var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
             const cancelActivation = this.actions.startActivation();
             try {
-                if (this.chainId !== (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) ||
-                    this.chainId === undefined) {
-                    this.initializeMagicInstance(desiredChainIdOrChainParameters);
-                }
-                yield this.isomorphicInitialize();
-                if (!this.provider) {
-                    throw new Error("No existing connection");
-                }
+                // Initialize the magic instance
+                yield this.initializeMagicInstance(desiredChainIdOrChainParameters);
+                yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.connectWithUI());
+                this.setEventListeners();
+                // Get the current chainId and account from the provider
                 const [chainId, accounts] = yield Promise.all([
-                    this.provider.request({ method: "eth_chainId" }),
-                    this.provider.request({ method: "eth_accounts" }),
+                    (_b = this.provider) === null || _b === void 0 ? void 0 : _b.request({ method: "eth_chainId" }),
+                    (_c = this.provider) === null || _c === void 0 ? void 0 : _c.request({ method: "eth_accounts" }),
                 ]);
+                // Update the connector state with the current chainId and account
                 this.actions.update({ chainId: parseChainId(chainId), accounts });
             }
             catch (error) {
                 cancelActivation();
-                this.eagerConnection = undefined;
-                throw error;
             }
         });
     }
-    /** {@inheritdoc Connector.connectEagerly} */
+    // "autoconnect"
     connectEagerly() {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            const walletInfo = yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.getInfo());
-            if (!walletInfo) {
-                throw new Error("No connected wallet");
-            }
+            const isLoggedIn = yield this.checkLoggedInStatus();
+            if (!isLoggedIn)
+                return;
             yield this.handleActivation();
         });
     }
+    // "connect"
     activate(desiredChainIdOrChainParameters) {
         return __awaiter(this, void 0, void 0, function* () {
             yield this.handleActivation(desiredChainIdOrChainParameters);
         });
     }
-    /** {@inheritdoc Connector.deactivate} */
+    // "disconnect"
     deactivate() {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            if (this.provider) {
-                this.provider.off("connect", this.connectListener);
-                this.provider.off("disconnect", this.disconnectListener);
-                this.provider.off("chainChanged", this.chainChangedListener);
-                this.provider.off("accountsChanged", this.accountsChangedListener);
-                yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
-            }
-            this.eagerConnection = undefined;
             this.actions.resetState();
+            yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
+            this.removeEventListeners();
         });
     }
 }

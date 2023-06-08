@@ -9,10 +9,6 @@ export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguratio
         chainId: number;
     };
 }
-/**
- * @param options - Options to pass to `magic-sdk`.
- * @param onError - Handler to report errors thrown from eventListeners.
- */
 export interface MagicConnectConstructorArgs {
     actions: Actions;
     options: MagicConnectorSDKOptions;
@@ -22,19 +18,18 @@ export declare class MagicConnect extends Connector {
     provider?: RPCProviderModule & AbstractProvider;
     magic?: Magic;
     chainId?: number;
-    private eagerConnection?;
     private readonly options;
     constructor({ actions, options, onError }: MagicConnectConstructorArgs);
     private connectListener;
     private disconnectListener;
     private chainChangedListener;
     private accountsChangedListener;
-    private isomorphicInitialize;
+    private setEventListeners;
+    private removeEventListeners;
     private initializeMagicInstance;
+    private checkLoggedInStatus;
     private handleActivation;
-    /** {@inheritdoc Connector.connectEagerly} */
     connectEagerly(): Promise<void>;
     activate(desiredChainIdOrChainParameters?: AddEthereumChainParameter): Promise<void>;
-    /** {@inheritdoc Connector.deactivate} */
     deactivate(): Promise<void>;
 }
