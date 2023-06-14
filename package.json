@@ -1,5 +1,5 @@
 {
-  "name": "web3-react-magic",
+  "name": "@magiclabs/web3-react",
   "publishConfig": {
     "access": "public"
   },
