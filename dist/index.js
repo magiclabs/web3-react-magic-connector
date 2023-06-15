@@ -84,8 +84,6 @@ class MagicConnect extends types_1.Connector {
                 (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
         }
     }
-    // Check if the user is logged to determine whether to
-    // display magic connect login ui
     checkLoggedInStatus() {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {

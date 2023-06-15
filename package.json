@@ -1,5 +1,5 @@
 {
-  "name": "web3-react-magic",
+  "name": "@magiclabs/web3-react",
   "publishConfig": {
     "access": "public"
   },
@@ -23,6 +23,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Unboxed-Software/web3-react-magic-connect.git"
+    "url": "https://github.com/magiclabs/web3-react-magic-connect"
   }
 }
