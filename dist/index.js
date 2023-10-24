@@ -9,15 +9,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MagicConnect = void 0;
+exports.MagicUniversal = void 0;
 const types_1 = require("@web3-react/types");
 const magic_sdk_1 = require("magic-sdk");
 function parseChainId(chainId) {
-    return typeof chainId === "number"
+    return typeof chainId === 'number'
         ? chainId
-        : Number.parseInt(chainId, chainId.startsWith("0x") ? 16 : 10);
+        : Number.parseInt(chainId, chainId.startsWith('0x') ? 16 : 10);
 }
-class MagicConnect extends types_1.Connector {
+class MagicUniversal extends types_1.Connector {
     constructor({ actions, options, onError }) {
         super(actions, onError);
         this.connectListener = ({ chainId }) => {
@@ -46,22 +46,22 @@ class MagicConnect extends types_1.Connector {
     }
     setEventListeners() {
         if (this.provider) {
-            this.provider.on("connect", this.connectListener);
-            this.provider.on("disconnect", this.disconnectListener);
-            this.provider.on("chainChanged", this.chainChangedListener);
-            this.provider.on("accountsChanged", this.accountsChangedListener);
+            this.provider.on('connect', this.connectListener);
+            this.provider.on('disconnect', this.disconnectListener);
+            this.provider.on('chainChanged', this.chainChangedListener);
+            this.provider.on('accountsChanged', this.accountsChangedListener);
         }
     }
     removeEventListeners() {
         if (this.provider) {
-            this.provider.off("connect", this.connectListener);
-            this.provider.off("disconnect", this.disconnectListener);
-            this.provider.off("chainChanged", this.chainChangedListener);
-            this.provider.off("accountsChanged", this.accountsChangedListener);
+            this.provider.off('connect', this.connectListener);
+            this.provider.off('disconnect', this.disconnectListener);
+            this.provider.off('chainChanged', this.chainChangedListener);
+            this.provider.off('accountsChanged', this.accountsChangedListener);
         }
     }
     initializeMagicInstance(desiredChainIdOrChainParameters) {
-        if (typeof window !== "undefined") {
+        if (typeof window !== 'undefined') {
             // Extract apiKey and networkOptions from options
             const { apiKey, networkOptions } = this.options;
             // Create a new Magic instance with desired ChainId for network switching
@@ -81,7 +81,8 @@ class MagicConnect extends types_1.Connector {
             this.provider = this.magic.rpcProvider;
             // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
             this.chainId =
-                (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
+                (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) ||
+                    networkOptions.chainId;
         }
     }
     checkLoggedInStatus() {
@@ -107,8 +108,10 @@ class MagicConnect extends types_1.Connector {
                 this.setEventListeners();
                 // Get the current chainId and account from the provider
                 const [chainId, accounts] = yield Promise.all([
-                    (_b = this.provider) === null || _b === void 0 ? void 0 : _b.request({ method: "eth_chainId" }),
-                    (_c = this.provider) === null || _c === void 0 ? void 0 : _c.request({ method: "eth_accounts" }),
+                    (_b = this.provider) === null || _b === void 0 ? void 0 : _b.request({
+                        method: 'eth_chainId',
+                    }),
+                    (_c = this.provider) === null || _c === void 0 ? void 0 : _c.request({ method: 'eth_accounts' }),
                 ]);
                 // Update the connector state with the current chainId and account
                 this.actions.update({ chainId: parseChainId(chainId), accounts });
@@ -143,4 +146,4 @@ class MagicConnect extends types_1.Connector {
         });
     }
 }
-exports.MagicConnect = MagicConnect;
+exports.MagicUniversal = MagicUniversal;

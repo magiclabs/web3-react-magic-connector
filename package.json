@@ -1,28 +1,28 @@
 {
-  "name": "@magiclabs/web3-react",
-  "publishConfig": {
-    "access": "public"
-  },
-  "version": "0.0.10",
-  "type": "commonjs",
-  "exports": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "main": "./dist/index.js",
-  "scripts": {
-    "prebuild": "rm -rf dist",
-    "build": "tsc",
-    "start": "tsc --watch"
-  },
-  "dependencies": {
-    "@web3-react/types": "^8.1.2-beta.0",
-    "magic-sdk": "^17.3.0",
-    "typescript": "^5.0.2"
-  },
-  "devDependencies": {
-    "@tsconfig/recommended": "^1.0.1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/magiclabs/web3-react-magic-connect"
-  }
+	"name": "@magiclabs/web3-react",
+	"publishConfig": {
+		"access": "public"
+	},
+	"version": "0.0.10",
+	"type": "commonjs",
+	"exports": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"main": "./dist/index.js",
+	"scripts": {
+		"prebuild": "rm -rf dist",
+		"build": "tsc",
+		"start": "tsc --watch"
+	},
+	"dependencies": {
+		"@web3-react/types": "^8.2.3",
+		"magic-sdk": "^21.2.0",
+		"typescript": "^5.2.2"
+	},
+	"devDependencies": {
+		"@tsconfig/recommended": "^1.0.1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/magiclabs/web3-react-magic-connect"
+	}
 }

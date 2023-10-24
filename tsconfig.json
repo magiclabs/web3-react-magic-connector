@@ -1,10 +1,10 @@
 {
-  "extends": "@tsconfig/recommended/tsconfig.json",
-  "include": ["./src"],
-  "compilerOptions": {
-    "outDir": "./dist",
-    "module": "CommonJS",
-    "declaration": true,
-    "moduleResolution": "Node"
-  }
+	"extends": "@tsconfig/recommended",
+	"include": ["./src"],
+	"compilerOptions": {
+		"outDir": "./dist",
+		"module": "CommonJS",
+		"declaration": true,
+		"moduleResolution": "Node"
+	}
 }
