@@ -9,17 +9,17 @@ export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguratio
         chainId: number;
     };
 }
-export interface MagicUniversalConstructorArgs {
+export interface MagicUniversalConnectorConstructorArgs {
     actions: Actions;
     options: MagicConnectorSDKOptions;
     onError?: (error: Error) => void;
 }
-export declare class MagicUniversal extends Connector {
+export declare class MagicUniversalConnector extends Connector {
     provider?: RPCProviderModule & AbstractProvider;
     magic?: Magic;
     chainId?: number;
     private readonly options;
-    constructor({ actions, options, onError }: MagicUniversalConstructorArgs);
+    constructor({ actions, options, onError, }: MagicUniversalConnectorConstructorArgs);
     private connectListener;
     private disconnectListener;
     private chainChangedListener;

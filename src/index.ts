@@ -25,19 +25,23 @@ export interface MagicConnectorSDKOptions
 	}
 }
 
-export interface MagicUniversalConstructorArgs {
+export interface MagicUniversalConnectorConstructorArgs {
 	actions: Actions
 	options: MagicConnectorSDKOptions
 	onError?: (error: Error) => void
 }
 
-export class MagicUniversal extends Connector {
+export class MagicUniversalConnector extends Connector {
 	public provider?: RPCProviderModule & AbstractProvider
 	public magic?: Magic
 	public chainId?: number
 	private readonly options: MagicConnectorSDKOptions
 
-	constructor({actions, options, onError}: MagicUniversalConstructorArgs) {
+	constructor({
+		actions,
+		options,
+		onError,
+	}: MagicUniversalConnectorConstructorArgs) {
 		super(actions, onError)
 		this.options = options
 		// Initializing Magic Instance in constructor otherwise it will be undefined when calling connectEagerly
