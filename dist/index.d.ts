@@ -1,35 +1,36 @@
-import { Connector, Actions, AddEthereumChainParameter } from '@web3-react/types';
-import { Magic, MagicSDKAdditionalConfiguration } from 'magic-sdk';
-import { RPCProviderModule } from '@magic-sdk/provider/dist/types/modules/rpc-provider';
-import { AbstractProvider } from 'web3-core';
+import { Connector, Actions, AddEthereumChainParameter } from "@web3-react/types";
+import { Magic, MagicSDKAdditionalConfiguration } from "magic-sdk";
+import { RPCProviderModule } from "@magic-sdk/provider/dist/types/modules/rpc-provider";
+import { AbstractProvider } from "web3-core";
 export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguration {
-    apiKey: string;
-    networkOptions: {
-        rpcUrl: string;
-        chainId: number;
-    };
+  apiKey: string;
+  networkOptions: {
+    rpcUrl: string;
+    chainId: number;
+  };
 }
 export interface MagicUniversalConnectorConstructorArgs {
-    actions: Actions;
-    options: MagicConnectorSDKOptions;
-    onError?: (error: Error) => void;
+  actions: Actions;
+  options: MagicConnectorSDKOptions;
+  onError?: (error: Error) => void;
 }
 export declare class MagicUniversalConnector extends Connector {
-    provider?: RPCProviderModule & AbstractProvider;
-    magic?: Magic;
-    chainId?: number;
-    private readonly options;
-    constructor({ actions, options, onError, }: MagicUniversalConnectorConstructorArgs);
-    private connectListener;
-    private disconnectListener;
-    private chainChangedListener;
-    private accountsChangedListener;
-    private setEventListeners;
-    private removeEventListeners;
-    private initializeMagicInstance;
-    private checkLoggedInStatus;
-    private handleActivation;
-    connectEagerly(): Promise<void>;
-    activate(desiredChainIdOrChainParameters?: AddEthereumChainParameter): Promise<void>;
-    deactivate(): Promise<void>;
+  provider?: RPCProviderModule & AbstractProvider;
+  magic?: Magic;
+  chainId?: number;
+  private readonly options;
+  constructor({ actions, options, onError }: MagicUniversalConnectorConstructorArgs);
+  private connectListener;
+  private disconnectListener;
+  private chainChangedListener;
+  private accountsChangedListener;
+  private setEventListeners;
+  private removeEventListeners;
+  private initializeMagicInstance;
+  private checkLoggedInStatus;
+  private handleActivation;
+  connectEagerly(): Promise<void>;
+  activate(desiredChainIdOrChainParameters?: AddEthereumChainParameter): Promise<void>;
+  deactivate(): Promise<void>;
 }
+export declare class MagicConnect extends MagicUniversalConnector {}
