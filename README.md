@@ -15,7 +15,7 @@ import { initializeConnector } from "@web3-react/core";
 import { MagicUniversalConnector } from "@magiclabs/web3-react";
 
 // Initialize the MagicUniversalConnector
-export const [MagicUniversalConnector, hooks] =
+export const [magicConnector, hooks] =
   initializeConnector<MagicUniversalConnector>(
     (actions) =>
       new MagicUniversalConnector({
