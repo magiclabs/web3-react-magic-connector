@@ -19,7 +19,7 @@ export declare class MagicUniversalConnector extends Connector {
     magic?: Magic;
     chainId?: number;
     private readonly options;
-    constructor({ actions, options, onError }: MagicUniversalConnectorConstructorArgs);
+    constructor({ actions, options, onError, }: MagicUniversalConnectorConstructorArgs);
     private connectListener;
     private disconnectListener;
     private chainChangedListener;

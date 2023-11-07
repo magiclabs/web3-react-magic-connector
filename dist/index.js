@@ -13,10 +13,12 @@ exports.MagicConnect = exports.MagicUniversalConnector = void 0;
 const types_1 = require("@web3-react/types");
 const magic_sdk_1 = require("magic-sdk");
 function parseChainId(chainId) {
-    return typeof chainId === "number" ? chainId : Number.parseInt(chainId, chainId.startsWith("0x") ? 16 : 10);
+    return typeof chainId === "number"
+        ? chainId
+        : Number.parseInt(chainId, chainId.startsWith("0x") ? 16 : 10);
 }
 class MagicUniversalConnector extends types_1.Connector {
-    constructor({ actions, options, onError }) {
+    constructor({ actions, options, onError, }) {
         super(actions, onError);
         this.connectListener = ({ chainId }) => {
             this.actions.update({ chainId: parseChainId(chainId) });
@@ -78,7 +80,8 @@ class MagicUniversalConnector extends types_1.Connector {
             // Get the provider from magicInstance
             this.provider = this.magic.rpcProvider;
             // Set the chainId. If no chainId was passed as a parameter, use the chainId from networkOptions
-            this.chainId = (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
+            this.chainId =
+                (desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId) || networkOptions.chainId;
         }
     }
     checkLoggedInStatus() {
@@ -137,7 +140,7 @@ class MagicUniversalConnector extends types_1.Connector {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             this.actions.resetState();
-            yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
+            yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.user.logout());
             this.removeEventListeners();
         });
     }

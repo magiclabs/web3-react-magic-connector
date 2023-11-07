@@ -1,6 +1,6 @@
 # web3-react-magic-universal-wallet
 
-[Magic Universal Wallet](https://magic.link/docs/universal/overview) connector for [web3-react](https://github.com/Uniswap/web3-react).
+[Magic Universal Wallet](https://magic.link/docs/wallets/wallet-types#universal-wallet) connector for [web3-react](https://github.com/Uniswap/web3-react).
 
 ## Install
 
