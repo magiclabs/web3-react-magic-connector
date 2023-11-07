@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MagicConnect = void 0;
+exports.MagicConnect = exports.MagicUniversalConnector = void 0;
 const types_1 = require("@web3-react/types");
 const magic_sdk_1 = require("magic-sdk");
 function parseChainId(chainId) {
@@ -17,8 +17,8 @@ function parseChainId(chainId) {
         ? chainId
         : Number.parseInt(chainId, chainId.startsWith("0x") ? 16 : 10);
 }
-class MagicConnect extends types_1.Connector {
-    constructor({ actions, options, onError }) {
+class MagicUniversalConnector extends types_1.Connector {
+    constructor({ actions, options, onError, }) {
         super(actions, onError);
         this.connectListener = ({ chainId }) => {
             this.actions.update({ chainId: parseChainId(chainId) });
@@ -107,7 +107,9 @@ class MagicConnect extends types_1.Connector {
                 this.setEventListeners();
                 // Get the current chainId and account from the provider
                 const [chainId, accounts] = yield Promise.all([
-                    (_b = this.provider) === null || _b === void 0 ? void 0 : _b.request({ method: "eth_chainId" }),
+                    (_b = this.provider) === null || _b === void 0 ? void 0 : _b.request({
+                        method: "eth_chainId",
+                    }),
                     (_c = this.provider) === null || _c === void 0 ? void 0 : _c.request({ method: "eth_accounts" }),
                 ]);
                 // Update the connector state with the current chainId and account
@@ -138,9 +140,12 @@ class MagicConnect extends types_1.Connector {
         var _a;
         return __awaiter(this, void 0, void 0, function* () {
             this.actions.resetState();
-            yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.wallet.disconnect());
+            yield ((_a = this.magic) === null || _a === void 0 ? void 0 : _a.user.logout());
             this.removeEventListeners();
         });
     }
+}
+exports.MagicUniversalConnector = MagicUniversalConnector;
+class MagicConnect extends MagicUniversalConnector {
 }
 exports.MagicConnect = MagicConnect;

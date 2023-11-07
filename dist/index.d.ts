@@ -9,17 +9,17 @@ export interface MagicConnectorSDKOptions extends MagicSDKAdditionalConfiguratio
         chainId: number;
     };
 }
-export interface MagicConnectConstructorArgs {
+export interface MagicUniversalConnectorConstructorArgs {
     actions: Actions;
     options: MagicConnectorSDKOptions;
     onError?: (error: Error) => void;
 }
-export declare class MagicConnect extends Connector {
+export declare class MagicUniversalConnector extends Connector {
     provider?: RPCProviderModule & AbstractProvider;
     magic?: Magic;
     chainId?: number;
     private readonly options;
-    constructor({ actions, options, onError }: MagicConnectConstructorArgs);
+    constructor({ actions, options, onError, }: MagicUniversalConnectorConstructorArgs);
     private connectListener;
     private disconnectListener;
     private chainChangedListener;
@@ -32,4 +32,6 @@ export declare class MagicConnect extends Connector {
     connectEagerly(): Promise<void>;
     activate(desiredChainIdOrChainParameters?: AddEthereumChainParameter): Promise<void>;
     deactivate(): Promise<void>;
+}
+export declare class MagicConnect extends MagicUniversalConnector {
 }

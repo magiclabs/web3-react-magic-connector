@@ -25,19 +25,23 @@ export interface MagicConnectorSDKOptions
   }
 }
 
-export interface MagicConnectConstructorArgs {
+export interface MagicUniversalConnectorConstructorArgs {
   actions: Actions
   options: MagicConnectorSDKOptions
   onError?: (error: Error) => void
 }
 
-export class MagicConnect extends Connector {
+export class MagicUniversalConnector extends Connector {
   public provider?: RPCProviderModule & AbstractProvider
   public magic?: Magic
   public chainId?: number
   private readonly options: MagicConnectorSDKOptions
 
-  constructor({ actions, options, onError }: MagicConnectConstructorArgs) {
+  constructor({
+    actions,
+    options,
+    onError,
+  }: MagicUniversalConnectorConstructorArgs) {
     super(actions, onError)
     this.options = options
     // Initializing Magic Instance in constructor otherwise it will be undefined when calling connectEagerly
@@ -137,7 +141,9 @@ export class MagicConnect extends Connector {
 
       // Get the current chainId and account from the provider
       const [chainId, accounts] = await Promise.all([
-        this.provider?.request({ method: "eth_chainId" }) as Promise<string>,
+        this.provider?.request({
+          method: "eth_chainId",
+        }) as Promise<string>,
         this.provider?.request({ method: "eth_accounts" }) as Promise<string[]>,
       ])
 
@@ -165,7 +171,9 @@ export class MagicConnect extends Connector {
   // "disconnect"
   public async deactivate(): Promise<void> {
     this.actions.resetState()
-    await this.magic?.wallet.disconnect()
+    await this.magic?.user.logout()
     this.removeEventListeners()
   }
 }
+
+export class MagicConnect extends MagicUniversalConnector {}
