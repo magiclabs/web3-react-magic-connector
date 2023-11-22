@@ -35,3 +35,7 @@ export declare class MagicUniversalConnector extends Connector {
 }
 export declare class MagicConnect extends MagicUniversalConnector {
 }
+export declare class MagicDedicatedConnector extends MagicUniversalConnector {
+}
+export declare class MagicAuth extends MagicUniversalConnector {
+}

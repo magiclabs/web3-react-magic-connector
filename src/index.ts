@@ -177,3 +177,5 @@ export class MagicUniversalConnector extends Connector {
 }
 
 export class MagicConnect extends MagicUniversalConnector {}
+export class MagicDedicatedConnector extends MagicUniversalConnector {}
+export class MagicAuth extends MagicUniversalConnector {}
