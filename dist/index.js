@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MagicConnect = exports.MagicUniversalConnector = void 0;
+exports.MagicAuth = exports.MagicDedicatedConnector = exports.MagicConnect = exports.MagicUniversalConnector = void 0;
 const types_1 = require("@web3-react/types");
 const magic_sdk_1 = require("magic-sdk");
 function parseChainId(chainId) {
@@ -149,3 +149,9 @@ exports.MagicUniversalConnector = MagicUniversalConnector;
 class MagicConnect extends MagicUniversalConnector {
 }
 exports.MagicConnect = MagicConnect;
+class MagicDedicatedConnector extends MagicUniversalConnector {
+}
+exports.MagicDedicatedConnector = MagicDedicatedConnector;
+class MagicAuth extends MagicUniversalConnector {
+}
+exports.MagicAuth = MagicAuth;
